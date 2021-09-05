@@ -1,4 +1,4 @@
-function [match_xl, flag, num_eval] = ll_localsearch(best_x, best_f, best_c, s, xu, prob)
+function [match_xl, flag, num_eval] = ll_localsearch(best_x, best_f, best_c, s, xu, prob, maxFE)
 % This method is part of local search algorithm
 % receives starting point
 %
@@ -20,7 +20,7 @@ fmin_con = @(x)llconstraint(x, xu, prob);
 opts = optimset('fmincon');
 opts.Algorithm = 'sqp';
 opts.Display = 'off';
-opts.MaxFunctionEvaluations = 1000;
+opts.MaxFunctionEvaluations = maxFE;
 [newxl, newfl, ~, output] = fmincon(fmin_obj, best_x, [], [],[], [],  ...
     prob.xl_bl, prob.xl_bu, fmin_con,opts);
 

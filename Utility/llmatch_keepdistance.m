@@ -56,8 +56,12 @@ end
 
 % include seeding xl
 if ~isempty(seed_xl)  && seeding_only                                 %  only local search with seeding
+    if rn>0
+        maxFE = 100; else
+        maxFE = 200;
+    end
     [seed_fl, seed_fc]                = prob.evaluate_l(xu, seed_xl);
-    [match_xl, flag, num_eval] = ll_localsearch(seed_xl, seed_fl, seed_fc, true, xu, prob);
+    [match_xl, flag, num_eval] = ll_localsearch(seed_xl, seed_fl, seed_fc, true, xu, prob, maxFE);
     n_fev = num_eval + 1;
     [match_fl, match_cl]          = prob.evaluate_l(xu, match_xl); % additional lazy step, can be extracted from local search results
     % lower_archive = varargin{4};
@@ -73,7 +77,7 @@ if ~isempty(seed_xl)  && seeding_only                                 %  only lo
         additional_searchcl = [];
         for i = 1:rn
             [restart_fl, restart_cl] = prob.evaluate_l(xu, restart_xl(i, :));
-            [match_xlrestart, flag, num_eval] = ll_localsearch(restart_xl(i, :), restart_fl , restart_cl, true, xu, prob);
+            [match_xlrestart, flag, num_eval] = ll_localsearch(restart_xl(i, :), restart_fl , restart_cl, true, xu, prob, maxFE);
             n_fev = n_fev + num_eval + 1;
             [match_flrestart, match_clrestart] = prob.evaluate_l(xu, match_xlrestart);
             additional_searchxl = [additional_searchxl; match_xlrestart];
@@ -112,8 +116,9 @@ if ~isempty(lower_archive) && ~isempty(archive)  % when archive is passed in, me
 
     
     if r>0.95 % skip infill
+        maxFE = 180;
        [seed_fl, seed_fc]                = prob.evaluate_l(xu, seed_xl);
-       [match_xl, ~, num_eval]     = ll_localsearch(seed_xl, seed_fl, seed_fc, true, xu, prob);
+       [match_xl, ~, num_eval]     = ll_localsearch(seed_xl, seed_fl, seed_fc, true, xu, prob, maxFE);
        n_fev = num_eval + 1;
        [match_fl, match_cl]          = prob.evaluate_l(xu, match_xl);  % additional lazy step, can be extracted from local search results
        additional_searchxl           = [seed_xl; match_xl]; % variable name from copy paste 
@@ -264,7 +269,8 @@ else
     if size(train_fl, 2)> 1
         error('local search does not apply to MO');
     end
-    [match_xl, ~, num_eval] = ll_localsearch(best_x, best_f, best_c, s, xu, prob);
+    maxFE = 160;
+    [match_xl, ~, num_eval] = ll_localsearch(best_x, best_f, best_c, s, xu, prob, maxFE);
     n_global                   = size(train_xl, 1);
     n_fev                      = n_global +num_eval;       % one in a population is evaluated
    
