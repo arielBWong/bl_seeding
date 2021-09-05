@@ -37,6 +37,7 @@ prob = eval(prob);
 uppernext = str2func(infill_metodstr);                % Infill algorithm handle for lower level
 method = strcat('local', method_str);
 localsearch = false;
+normhn = eval('normalization_z');
 
 
 %plot_matching(prob);
@@ -85,8 +86,8 @@ end
 
 % -- archive all evaluated
 archive.xu     = xu;
-archive.xl       = xl;
-archive.fu      = fu;
+archive.xl     = xl;
+archive.fu     = fu;
 archive.fl      = fl;
 archive.cu     = cu;
 archive.cl      = cl;
@@ -114,7 +115,12 @@ for iter = 1:numiter_u
         model_xl = [];
         arc_trgxl = [];
     end
-    [newxu, ~] = Believer_nextExtended(archive, prob, param_ea, krg_param, model_xl, arc_trgxl, extended);
+    % [newxu, ~] = Believer_nextExtended(archive, prob, param_ea, krg_param, model_xl, arc_trgxl, extended);
+    
+   
+    [newxu, ~] = Believer_nextUpdate(xu, fu, prob.xu_bu, prob.xu_bl, ...
+    num_pop, num_gen, cu, normhn);
+    
     disp(newxu);
     
     dist  = pdist2(newxu, archive.xu);
@@ -148,15 +154,27 @@ for iter = 1:numiter_u
     % newxl = prob.get_xlprime(newxu);
     
     [newfu, newcu] = prob.evaluate_u(newxu, newxl);
-    [newfl, newcl] =   prob.evaluate_l(newxu, newxl);
+    [newfl, newcl] = prob.evaluate_l(newxu, newxl);
+    
+    % distance control
+    distcheck_xu = [xu; newxu];
+    distcheck_fu = [fu; newfu];
+    distcheck_cu = [cu; newcu];
+    
+    dist_id = keepdistance_returnID(distcheck_xu, distcheck_fu, distcheck_cu, prob.xu_bu, prob.xu_bl);
+    
+    xu = [xu; newxu]; xl = [xl; newxl]; fu = [fu; newfu];
+    fl = [fl; newfl]; cu = [cu; newcu]; cl = [cl; newcl];
+    
+    if dist_id > 0
+        xu(dist_id, :) = []; xl(dist_id, :) = []; fu(dist_id, :) = [];
+        fl(dist_id, :) = []; cu(dist_id, :) = []; cl(dist_id, :) = [];
+    end
     
   
-    archive.xu =  [archive.xu; newxu];
-    archive.xl =  [archive.xl; newxl];
-    archive.fu =  [archive.fu; newfu];
-    archive.fl  =  [archive.fl; newfl];
-    archive.cu =  [archive.cu; newcu];
-    archive.cl =  [archive.cl; newcl];
+    archive.xu =  xu; archive.xl =  xl;  archive.fu =  fu;
+    archive.fl = fl;  archive.cu =  cu; archive.cl =  cl;
+    
     
 end
 %obj.close();
