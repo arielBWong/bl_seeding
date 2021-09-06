@@ -6,7 +6,7 @@ function blmapping_main(problem_str, seed, extended, varargin)
 p = inputParser;
 addRequired(p,   'problem_str');
 addRequired(p,   'seed');
-addRequired(p, 'extended');
+addRequired(p,   'extended');
 addParameter(p, 'local_str', 'vanilla');
 addParameter(p, 'restart_num', 0);
 addParameter(p, 'use_seeding', false);
@@ -21,7 +21,7 @@ use_seeding = p.Results.use_seeding;
 rx = p.Results.restart_num; 
 %---
 
-visualize = false;
+visualize = true;
 if visualize
     fighn = figure('Position', [100 100 800 800]);
     h1     = subplot(2, 2, 1);
@@ -37,7 +37,7 @@ prob = eval(prob);
 uppernext = str2func(infill_metodstr);                % Infill algorithm handle for lower level
 method = strcat('local', method_str);
 localsearch = false;
-normhn = eval('normalization_z');
+normhn = str2func('normalization_z');
 
 
 %plot_matching(prob);
@@ -57,7 +57,7 @@ llmatch_p.localmethod    = [];
 xu = lhsdesign(inisize_u, prob.n_uvar, 'criterion', 'maximin', 'iterations', 1000);
 xu = repmat(prob.xu_bl, inisize_u, 1) + repmat((prob.xu_bu - prob.xu_bl), inisize_u, 1) .* xu;
 
-xl	             = [];
+xl	       = [];
 low_neval  = 0;
 
 % for testing lower level correlation
@@ -75,8 +75,8 @@ for i = 1:inisize_u
 %     lower_archive      = dummy_function(prob, xu(i, :), lower_archive);     
 %     xl_single              = prob.get_xlprime(xu(i, :));
 %      n                         = 0;
-     xl                         = [xl; xl_single];
-     n_FE                    = n_FE + n;
+     xl                  = [xl; xl_single];
+     n_FE                = n_FE + n;
 end
 
 
@@ -94,7 +94,7 @@ archive.cl      = cl;
 archive.flag  = ones(inisize_u, 1);
 
 krg_param.GPR_type              = 2;
-krg_param.no_trials                = 1;
+krg_param.no_trials              = 1;
 
 %---- prepare mapping---
 param_ea.popsize = num_pop;
@@ -129,17 +129,14 @@ for iter = 1:numiter_u
     
     if use_seeding
         [newxl, n, ~, lower_archive]   = llmatch_keepdistance(newxu, llmatch_p, 'visualization', false,'seed_xl', seed_xl, ...
-            'lower_archive', lower_archive, 'seeding_only', true, 'restartn', rx);   
-
-         if visualize
-            seed_xu = archive.xu(idx(1), :);
-            seedinglower_plot2D(h1, h2, h3, prob, newxu, newxl, seed_xu, seed_xl, archive, lower_archive, idx)
-            
-%             for t = 1:30
-%                 ff = getframe(gcf);
-%                 writeVideo(obj, ff);
-%             end    
-        end
+            'lower_archive', lower_archive, 'seeding_only', true, 'restartn', rx);
+        
+        
+        %             for t = 1:30
+        %                 ff = getframe(gcf);
+        %                 writeVideo(obj, ff);
+        %             end
+        
         
     else
         [newxl, n, ~, lower_archive]   = llmatch_keepdistance(newxu, llmatch_p, 'visualization', false, 'seed_xl', seed_xl, ...
@@ -148,6 +145,10 @@ for iter = 1:numiter_u
         % lower_archive   = dummy_function(prob, newxu, lower_archive);
         % newxl = prob.get_xlprime(newxu);
         
+    end
+    if visualize
+        seed_xu = archive.xu(idx(1), :);
+        seedinglower_plot2D(h1, h2, h3, prob, newxu, newxl, seed_xu, seed_xl, archive, lower_archive, idx)
     end
     
     low_neval = low_neval + n;
@@ -163,15 +164,27 @@ for iter = 1:numiter_u
     
     dist_id = keepdistance_returnID(distcheck_xu, distcheck_fu, distcheck_cu, prob.xu_bu, prob.xu_bl);
     
+    % expand
     xu = [xu; newxu]; xl = [xl; newxl]; fu = [fu; newfu];
     fl = [fl; newfl]; cu = [cu; newcu]; cl = [cl; newcl];
     
+    % eliminate close
     if dist_id > 0
+        
+        fprintf('upper to delete %d \n', dist_id);
+        fprintf('upper total size %d \n',size(xu, 1));
+        
         xu(dist_id, :) = []; xl(dist_id, :) = []; fu(dist_id, :) = [];
-        fl(dist_id, :) = []; cu(dist_id, :) = []; cl(dist_id, :) = [];
+        fl(dist_id, :) = []; 
+        if ~isempty(cu) 
+            cu(dist_id, :) = [];
+        end
+        if ~isempty(cl)
+            cl(dist_id, :) = [];
+        end
     end
     
-  
+   % save 
     archive.xu =  xu; archive.xl =  xl;  archive.fu =  fu;
     archive.fl = fl;  archive.cu =  cu; archive.cl =  cl;
     
