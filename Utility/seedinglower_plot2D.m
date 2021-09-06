@@ -46,7 +46,7 @@ plot3(seed_xl(1), seed_xl(2), fl_1,   'Marker', 'o', 'MarkerSize', 8, 'Color', '
 plot3(newxl(1), newxl(2), fl_2,   'Marker', 'o', 'MarkerSize', 8, 'Color', 'red','MarkerFaceColor' ,'red'); hold on;
 plot3(lower_archive.init_xl(:,1), lower_archive.init_xl(:, 2), lower_archive.init_fl(end, :)','Marker', 'x');
 r = corr(lower_archive.init_fl(end, :)', lower_archive.init_fl(idx(1), :)');
-lower_archive.r = [lower_archive.r , r];
+
 
 title(r);
 hold on;

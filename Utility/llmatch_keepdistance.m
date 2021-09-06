@@ -617,8 +617,8 @@ if isempty(krgc)
     
         colorbar
         ynorm_min       = min(arc_obj.muf);
-        eif             = EIM_evaldaceUpdate(localnewx, ynorm_min,  arc_obj, krg);
-        eif             = -eif;
+        eif                     = EIM_evaldaceUpdate(localnewx, ynorm_min,  arc_obj, krg);
+        eif                     = -eif;
         
         scatter3(localnewx(1),  localnewx(2), eif,  80, 'r', 'filled' ); hold on;
         title('EIM landscape');
