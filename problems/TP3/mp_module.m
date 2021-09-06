@@ -12,15 +12,15 @@ xl_center= prob.get_xlprime(xu);
 
 
 nx    = size(xu, 1);
-w     = ones(np, 1) * 0.02; % width
-h      = ones(np, 1) * 150; % height
-h(1)  = 200;
+w     = ones(np, 1) * 0.01; % width
+h      = ones(np, 1) * 50; % height
+h(1)  = 70;
 
 v = 0.3 .*  (prob.xl_bu(prob.q+1 : end) - prob.xl_bl(prob.q+1 : end));      % distances between basin centers
 v = [zeros(1, prob.q), v];
 
 % alpha parameter, make basin of attractions  round
-delta = 100 ./ (prob.xl_bu -prob.xl_bl);
+delta = 80 ./ (prob.xl_bu -prob.xl_bl);
 
 forward =  xl_center + v;
 backward = xl_center - v;
