@@ -21,8 +21,8 @@ addpath(problem_folder);
 
 problems = {'smd5mp(1, 1, 1)' , 'smd7mp(1, 1, 1)',  'smd8mp(1, 1, 1)'};
 
-blmapping_main('smd5mp(1, 1, 1)',  6,  false,...
-                            'local_str', 'vanilla', 'use_seeding', false, 'restart_num', 1);
+blmapping_main('smd7mp(1, 1, 1)',  8,  false,...
+                             'local_str', 'vanilla', 'use_seeding', false, 'restart_num', 1);
 
 % % --------
 % seeds = 1:11;
