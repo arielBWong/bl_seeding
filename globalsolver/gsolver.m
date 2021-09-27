@@ -1,4 +1,4 @@
-function [bestx, bestf, bestc, archive] = gsolver(funh_obj, num_xvar, lb, ub, initmatrix, funh_con, param, varargin)
+function [bestx, bestf, bestc, archive, external_return] = gsolver(funh_obj, num_xvar, lb, ub, initmatrix, funh_con, param, varargin)
 % This function is a wrapper on methods in global optimization/minimization
 % folder. Main process is nsga, but reproducation is a DE operator
 % Be aware, this method only handle inequality constraints
@@ -21,27 +21,57 @@ function [bestx, bestf, bestc, archive] = gsolver(funh_obj, num_xvar, lb, ub, in
 %                       for constraint problems, if no feasible is found, return least infeasible one
 %  ** under development of archive handling
 %--------------------------------------------------------------------------
+% create argument parser
 
+p = inputParser;
+addRequired(p,   'funh_obj');
+addRequired(p,   'num_xvar');
+addRequired(p,   'lb');
+addRequired(p,   'ub');
+addRequired(p,   'initmatrix');
+addRequired(p,   'funh_con');
+addRequired(p,   'param');
+addParameter(p, 'externalfunction', []);
+addParameter(p, 'visualize', false);
+parse(p, funh_obj, num_xvar, lb, ub, initmatrix, funh_con, param, varargin{:});
+%-------
+
+funh_obj= p.Results.funh_obj;
+num_xvar = p.Results.num_xvar;
+lb = p.Results.lb;
+ub = p.Results.ub;
+initmatrix= p.Results.initmatrix;
+funh_con = p.Results.funh_con;
+param = p.Results.param;
+external_funh= p.Results.externalfunction;
+visualize = p.Results.visualize;
+%-----------
+external_return = [];
 bestx = NaN;
 bestf = NaN;
 bestc = NaN;
-if ~isempty(varargin)
+
+if visualize
     f1 = figure(2);
 end
 
 
 % Initialization
 [pop,archive] = initialize_pop(funh_obj, funh_con, num_xvar, lb, ub, initmatrix, param);
+if ~isempty(external_funh)
+    external_funh(pop.X);
+end
 
 %%%%%%%%%%%%%%%%%%%%%
-if ~isempty(varargin) && size(lb, 2) == 1
+if visualize && size(lb, 2) == 1
      plot1d(f1, lb, ub, param)
 end
 
-if ~isempty(varargin) && size(lb, 2) == 2
+if visualize && size(lb, 2) == 2
      plot2d(f1, lb, ub, param, pop, funh_obj);
 end
 %%%%%%%%%%%%%%%%%%%%
+
 
 gen=1;
 while gen<= param.gen
@@ -54,12 +84,23 @@ while gen<= param.gen
     % Reduce 2N to N
     [pop]=reduce_pop(pop,param.popsize);
     
+    % for external function
+    if ~isempty(external_funh)
+        external_funh(pop.X);
+    end
+
+  
     %%%%%%%%%%%%%%%%%%%%%%%%%
-    if ~isempty(varargin)&&size(lb, 2) == 1
+    if visualize &&size(lb, 2) == 1
        plot1d(f1, lb, ub, param); 
     end
-    if ~isempty(varargin) && size(lb, 2) == 2
+    
+    if  visualize && size(lb, 2) == 2
         plot2d(f1, lb, ub, param, pop, funh_obj);
+    end
+    
+     if visualize && size(pop.F, 2) == 3
+        plotMO(f1, pop.F, varargin{2});
     end
 
     %%%%%%%%%%%%%%%%%%%%%%%%
@@ -69,7 +110,7 @@ end
 
 
 
-if ~isempty(varargin)
+if visualize
     close(f1);  
 end
 
@@ -93,7 +134,7 @@ end
 
 % return feasible nd front
 if num_obj > 1
-    if ~isempty(pop.C)                                    % constraint problem
+    if ~isempty(pop.C)                                           % constraint problem
         pop.C(pop.C<=0) = 0;
         fy_ind = sum(pop.C, 2) ==0;
     else
@@ -120,6 +161,15 @@ else
     bestx = pop.X(id(1),  :);
     bestc = pop.C(id(1),  :);
 end
+end
+
+
+function plotMO(fighn, pop, pf )
+clf(fighn);
+plot3(pf(:, 1), pf(:, 2), pf(:, 3), 'go'); hold on;
+plot3(pop(:, 1), pop(:, 2), pop(:, 3), 'ro');
+grid on;
+pause(0.1);
 end
 
 function plot1d(fighn, lb, ub, param, pop)
