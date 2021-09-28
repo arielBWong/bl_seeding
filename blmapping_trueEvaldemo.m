@@ -4,45 +4,46 @@ function blmapping_trueEvaldemo(problem_str, seed, varargin)
 
 % parse input
 p = inputParser;
-addRequired(p,   'problem_str');
-addRequired(p,   'seed');
+addRequired(p,  'problem_str');
+addRequired(p,  'seed');
 addParameter(p, 'restart_num', 0);
 addParameter(p, 'use_seeding', false);
 parse(p, problem_str, seed, varargin{:});
 
 %--- assign input parameters
-prob  = p.Results.problem_str;
-seed  = p.Results.seed;
+prob_str = p.Results.problem_str;
+seed = p.Results.seed;
 use_seeding = p.Results.use_seeding;
 rx = p.Results.restart_num;
 %---
 
 visualize = false;
 if visualize
-    fighn = figure('Position', [100 100 800 800]);
+    fighn  = figure('Position', [100 100 800 800]);
     h1     = subplot(2, 2, 1);
     h2     = subplot(2, 2, 3);
     h3     = subplot(2, 2, 4);
 end
 
 rng(seed, 'twister');
-prob = eval(prob);
+global prob
+prob = eval(prob_str);
 
 %------------------Process starts--------------------
 % insert global search
-inisize_l          = 20;
+inisize_l       = 20;
 xl_probe        = lhsdesign(inisize_l, prob.n_lvar, 'criterion','maximin','iterations',1000);
 xl_probe        = repmat(prob.xl_bl, inisize_l, 1) ...
     + repmat((prob.xl_bu - prob.xl_bl), inisize_l, 1) .* xl_probe;
 
-funh_external = @(xu)up_probrecord(xu,  xl_probe, prob);
+funh_external = @(pop)up_probrecord(pop,  xl_probe, prob);
 
 
-funh_obj  =  @(x)up_objective_func(prob, x, xl_probe);
-funh_con =  @(x)up_constraint_func(prob, x);
+funh_obj  =  @(x)up_objective_func(prob, x, xl_probe, use_seeding);
+funh_con  =  @(x)up_constraint_func(prob, x);
 
 param.gen = 10;
-param.popsize = 10;
+param.popsize = 50;
 lb = prob.xu_bl;
 ub = prob.xu_bu;
 num_xvar = prob.n_uvar;
@@ -51,29 +52,33 @@ initmatrix = [];
 global upper_xu
 global xu_probefl
 global lower_xl;
+global lower_eval;
 upper_xu = [];
 lower_xl = [];
 xu_probefl = [];
+lower_eval = 0;
 
-[best_x, ~, ~, ~] = gsolver(funh_obj, num_xvar, lb, ub, initmatrix, funh_con, param,  'externalfunction', funh_external);
+[best_x, ~, ~, ~] = gsolver(funh_obj, num_xvar, lb, ub, initmatrix, funh_con, param,  'externalfunction', funh_external,  'visualize', false);
 
 
 %obj.close();
-save_results(upper_xu, lower_xl, prob,  seed, use_seeding, rx);
+save_results(upper_xu, lower_xl, prob,  seed, use_seeding, rx, lower_eval);
 end
 
-function out = up_probrecord(xu, xl_probe, prob)
+function out = up_probrecord(pop, xl_probe, prob)
 % re-do one more round of initialization
 %
 
 global xu_probefl
 global upper_xu
+global lower_xl
 
-upper_xu = [upper_xu; xu];
+upper_xu = [upper_xu; pop.X];
+lower_xl = [lower_xl; pop.A];
 n = size(xl_probe, 1);
-m = size(xu, 1);
+m = size(pop.X, 1);
 for i =1:m
-    xui = repmat(xu(i, :), n, 1);
+    xui = repmat(pop.X(i, :), n, 1);
     fl_probe = prob.evaluate_l(xui, xl_probe);
     xu_probefl = [xu_probefl; fl_probe'];
 end
@@ -81,33 +86,41 @@ out= [];
 end
 
 
-function f =  up_objective_func(prob, xu, xl_probe)
+function [output] =  up_objective_func(prob, xu, xl_probe, use_seeding)
 global xu_probefl
 global upper_xu
+global lower_xl
 
 % upper xu and lower level does not change at the same time, 
 % upper_xu changes in generation wise, lower_xl changes in each xu's
 % evaluation step. they should eventually have the same size.
-global lower_xl  
+
 
 m = size(xu, 1);
 f = [];
+xl = [];
 for i = 1:m
     xui = xu(i, :);
-    [match_xl] =  llmatch_trueEvaluation(xui, prob,  20, xl_probe, 'lower_archive', xu_probefl, 'archive', upper_xu, 'lower_xl', lower_xl);
+  
+    [match_xl] =  llmatch_trueEvaluation(xui, prob,  20, xl_probe, ...
+        'lower_archive', xu_probefl, 'archive', upper_xu, 'lower_xl', lower_xl,...
+        'seeding_only', use_seeding);
     fi = prob.evaluate_u(xui, match_xl);
-    lower_xl = [lower_xl; match_xl];
-    f = [fi; f];
+    xl = [xl; match_xl];
+    f = [f; fi];
 end
+output.f = f;
+output.addon = xl; 
+
 end
 
 function c = up_constraint_func(prob, xu)
 c = [];
 end
 
-function  save_results(xu, xl, prob, seed, use_seeding, rx)
+function  save_results(xu, xl, prob, seed, use_seeding, rx, lower_eval)
 
-[fu, cu] = prob.evaluate_u(xu, xl);
+[fu, cu] = prob.evaluate_u(xu, xl); % lazy  step
 [fl, cl] = prob.evaluate_l(xu, xl);
 
 
@@ -153,6 +166,10 @@ filename = strcat('cl_seed_', num2str(seed), '.csv');
 savename = fullfile(resultfolder, filename);
 csvwrite(savename, cl);
 
+filename = strcat('lowerlevelcount_seed_', num2str(seed), '.csv');
+savename = fullfile(resultfolder, filename);
+csvwrite(savename, lower_eval);
+
 
 
 if size(fu, 2) > 1
@@ -190,27 +207,11 @@ else
     savename = fullfile(resultfolder, filename);
     csvwrite(savename, [ulp, llp]);
     
-    
 end
 
 
 end
 
 
-
-
-
-function f = obj(xu, xl, model_upper)
-x = [xu, xl];
-[f, ~] = Predict_DACE(model_upper{1}, x, 0);
-end
-
-function [c, ceq] = cons(xu, xl, model_lower, fl_bound)
-% create a mapping constraints
-ceq = [];
-x = [xu, xl];
-[fl, ~] = Predict_DACE(model_lower{1}, x, 0);
-c = fl - fl_bound;
-end
 
 

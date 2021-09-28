@@ -25,8 +25,18 @@ n_rest = N - n_init;
 X_pop  = repmat(xl, n_rest, 1) + repmat(xu - xl, n_rest, 1) .* lhsdesign(n_rest, num_xvar);
 X_pop  = [X_pop; initmatrix];
 
+
 % objective and constraints
-F_pop  = funh_obj(X_pop);
+output  = funh_obj(X_pop);
+
+if isstruct(output)
+    F_pop = output.f;
+    A_pop = output.addon;
+else
+    F_pop = output;
+    A_pop = [];
+end
+
 C_pop  = funh_con(X_pop);
 
 [~,ids,~] = nd_sort(F_pop, (1:size(F_pop,1))');
@@ -35,13 +45,19 @@ C_pop  = funh_con(X_pop);
 pop.X=X_pop(ids,:);
 pop.F=F_pop(ids,:);
 
+if isempty(A_pop)
+    pop.A = [];
+else
+    pop.A = A_pop(ids, :);
+end
+
 if isempty(C_pop)
     pop.C = [];
 else
     pop.C = C_pop(ids, :);
 end
 
-archive.sols=[repmat(0,N,1),  pop.X, pop.F, pop.C];
+archive.sols=[repmat(0,N,1),  pop.X, pop.F, pop.C, pop.A];
 
 return
 

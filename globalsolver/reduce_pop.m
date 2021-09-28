@@ -8,4 +8,9 @@ if ~isempty(pop.C)
     pop.C = pop.C(1: popsize, :);
 end
 
+if ~isempty(pop.A)
+    pop.A = pop.A(1: popsize, :);
+end
+
+
 return

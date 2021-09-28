@@ -131,20 +131,9 @@ for iter = 1:numiter_u
         [newxl, n, ~, lower_archive]   = llmatch_keepdistance(newxu, llmatch_p, 'visualization', false,'seed_xl', seed_xl, ...
             'lower_archive', lower_archive, 'seeding_only', true, 'restartn', rx);
         
-        
-        %             for t = 1:30
-        %                 ff = getframe(gcf);
-        %                 writeVideo(obj, ff);
-        %             end
-        
-        
     else
         [newxl, n, ~, lower_archive]   = llmatch_keepdistance(newxu, llmatch_p, 'visualization', false, 'seed_xl', seed_xl, ...
             'lower_archive', lower_archive, 'archive', archive);
-        
-        % lower_archive   = dummy_function(prob, newxu, lower_archive);
-        % newxl = prob.get_xlprime(newxu);
-        
     end
     if visualize
         seed_xu = archive.xu(idx(1), :);

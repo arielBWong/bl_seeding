@@ -15,18 +15,29 @@ function [pop, archive]= evaluate_order(pop, archive, funh_obj, funh_con, cx, ge
 %-------------------------
 child.X=cx;
 % This is NSGA-II
-child.F = funh_obj(child.X);
+output = funh_obj(child.X);
+
+if isstruct(output)
+    child.F = output.f;
+    child.A = output.addon;
+else
+    child.F = output;
+    child.A = [];
+end
+
+
 child.C = funh_con(child.X);
 numcon = size(child.C, 2);
 
-archive.sols=[archive.sols;[repmat(gen,param.popsize,1), child.X, child.F, child.C]];
+archive.sols=[archive.sols;[repmat(gen,param.popsize,1), child.X, child.F, child.C, child.A]];
 
 % Appending X F C to pop
 pop.X=[pop.X;child.X];
 pop.F=[pop.F;child.F];
 pop.C = [pop.C; child.C];
+pop.A = [pop.A; child.A];
 
-[pop.F, pop.X, pop.C] = pop_sort(pop.F, pop.X, pop.C);
+[pop.F, pop.X, pop.C, pop.A] = pop_sort(pop.F, pop.X, pop.C, pop.A);
 
 % dealing with feasibility on lower level
 if ~isempty(varargin)

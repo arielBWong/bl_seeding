@@ -58,8 +58,9 @@ end
 
 % Initialization
 [pop,archive] = initialize_pop(funh_obj, funh_con, num_xvar, lb, ub, initmatrix, param);
+
 if ~isempty(external_funh)
-    external_funh(pop.X);
+    external_funh(pop);
 end
 
 %%%%%%%%%%%%%%%%%%%%%
@@ -67,8 +68,12 @@ if visualize && size(lb, 2) == 1
      plot1d(f1, lb, ub, param)
 end
 
-if visualize && size(lb, 2) == 2
+if visualize && size(lb, 2)== 2 && isempty(external_funh) 
      plot2d(f1, lb, ub, param, pop, funh_obj);
+end
+
+if visualize && size(lb, 2) == 2 && ~isempty(external_funh)
+     plot2dupper(f1, lb, ub, pop);
 end
 %%%%%%%%%%%%%%%%%%%%
 
@@ -86,7 +91,7 @@ while gen<= param.gen
     
     % for external function
     if ~isempty(external_funh)
-        external_funh(pop.X);
+        external_funh(pop);
     end
 
   
@@ -95,13 +100,17 @@ while gen<= param.gen
        plot1d(f1, lb, ub, param); 
     end
     
-    if  visualize && size(lb, 2) == 2
+    if  visualize && size(lb, 2) == 2&& isempty(external_funh) 
         plot2d(f1, lb, ub, param, pop, funh_obj);
     end
     
      if visualize && size(pop.F, 2) == 3
         plotMO(f1, pop.F, varargin{2});
-    end
+     end
+    
+     if visualize && size(lb, 2) == 2 && ~isempty(external_funh)
+         plot2dupper(f1, lb, ub, pop);
+     end
 
     %%%%%%%%%%%%%%%%%%%%%%%%
     gen = gen+1;
@@ -204,11 +213,35 @@ x2_tst              = linspace(lb(2), ub(2), nt);
 for i =1 : nt
     for j = 1: nt
         cp(i, j)    = funh_obj([msx1(i, j), msx2(i, j)]);
-        cp(i, j)    = -cp(i, j);
+        % cp(i, j)    = -cp(i, j);
     end
 end
 surf(msx1, msx2, cp, 'FaceAlpha',0.5, 'EdgeColor', 'none'); hold on;
-scatter3(pop.X(:, 1), pop.X(:, 2), -pop.F,  80, 'r', 'filled' ); hold on;
+scatter3(pop.X(:, 1), pop.X(:, 2), pop.F,  80, 'r', 'filled' ); hold on;
 
 drawnow;
+end
+
+function plot2dupper(fighn, lb, ub, pop)
+global prob
+clf(fighn);
+nt                  = 100;
+
+cp                  = zeros(nt, nt);
+x1_tst              = linspace(lb(1), ub(1), nt);
+x2_tst              = linspace(lb(2), ub(2), nt);
+[msx1, msx2]        = meshgrid(x1_tst, x2_tst);
+msx11 = msx1(:);
+msx22 = msx2(:);
+xu = [msx11, msx22];
+xl = prob.get_xlprime(xu);
+
+fu = prob.evaluate_u(xu, xl);
+fu = reshape(fu, [nt, nt]);
+
+surf(msx1, msx2, fu, 'FaceAlpha',0.5, 'EdgeColor', 'none'); hold on;
+scatter3(pop.X(:, 1), pop.X(:, 2), pop.F,  80, 'r', 'filled' ); hold on;
+
+
+
 end
