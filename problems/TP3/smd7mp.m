@@ -104,7 +104,7 @@ classdef smd7mp
 %                     + sum((xl1).^2, 2) ...
 %                     + sum((xu2 - log(xl2)).^2, 2);
             
-            dr = obj.xu_bu(obj.p + 1 :obj.p + obj.r) - obj.xu_bl(obj.p+1 :obj.p+obj.r);      
+            %dr = obj.xu_bu(obj.p + 1 :obj.p + obj.r) - obj.xu_bl(obj.p+1 :obj.p+obj.r);      
             f   = sum((xu1).^3, 2) ...
                     + sum((xl1).^2, 2) ...
                     + sum( (xl2 - t).^2, 2); 
@@ -119,7 +119,6 @@ classdef smd7mp
         
         
         function xl_prime = get_xlprime(obj, xu)
-            dr = obj.xu_bu(obj.p + 1 :obj.p + obj.r) - obj.xu_bl(obj.p+1 :obj.p+obj.r);
             n = size(xu, 1);
             xl_prime = zeros(n, obj.n_lvar);
             for i = 1:obj.q
