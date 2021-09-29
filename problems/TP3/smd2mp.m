@@ -12,8 +12,10 @@ classdef smd2mp
         name;
         uopt = 0;
         lopt = 0;
-        xu_prime = [0, 0];
-        xl_prime = [0, 0, 1];
+        xu_prime ;
+        xl_prime;
+        fu_prime;
+        fl_prime;
     end
     methods
         function obj = smd2mp(p, q, r)
@@ -49,6 +51,12 @@ classdef smd2mp
             
             obj.xl_bl = [xl_bl_1, xl_bl_2];
             obj.xl_bu = [xl_bu_1, xl_bu_2];
+            
+            % prime value 
+            obj.xu_prime = zeros(1, obj.n_uvar);
+            obj.xl_prime = obj.get_xlprime(obj.xu_prime);
+            obj.fl_prime = obj.evaluate_l(obj.xu_prime, obj.xl_prime);
+            obj.fu_prime = obj.evaluate_u(obj.xu_prime, obj.xl_prime);
             
         end
         
