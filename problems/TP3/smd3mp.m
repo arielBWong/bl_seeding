@@ -1,8 +1,7 @@
-classdef smd6mp
+classdef smd3mp
     properties
         p = 1;
-        s = 2;
-        q = 0;
+        q = 2;
         r = 1;
         n_lvar;
         n_uvar;
@@ -11,26 +10,22 @@ classdef smd6mp
         xl_bl;
         xl_bu;
         name;
-        fu_prime = 0;
-        fl_prime = 0;
+        uopt = 0;
+        lopt = 0;
         xu_prime = [0, 0];
         xl_prime = [0, 0, 0];
     end
     methods
-        function obj = smd6mp(p, q, s, r)
-            if nargin == 4
+        function obj = smd3mp(p, q, r)
+            if nargin == 3
                 obj.p = p;
                 obj.q = q;
                 obj.r = r;
-                obj.s = s;
             end
-            obj.name = 'SMD6mp';
-            if obj.q ~= 0
-                error('q variable is fixed to 0 due to implementation');
-            end
+            obj.name = 'SMD3mp';
             
             % level variables
-            obj.n_lvar = obj.q + obj.s + obj.r;
+            obj.n_lvar = obj.q + obj.r;
             obj.n_uvar = obj.p + obj.r;
             
             % bounds
@@ -43,18 +38,15 @@ classdef smd6mp
             obj.xu_bu = [xu_bu_1, xu_bu_2];
             
             % init bound lower level
-            xl_bl_1 = ones(1, obj.q + obj.s) * (-5.0);
-            xl_bu_1 = ones(1, obj.q + obj.s) * 10.0;
+            xl_bl_1 = ones(1, obj.q) * (-5.0);
+            xl_bu_1 = ones(1, obj.q) * 10.0;
             
             xl_bl_2 = ones(1, obj.r) * (0 );
             xl_bu_2 = ones(1, obj.r) * (10);
             
             
-            % xl_bl_2 = ones(1, obj.r) * (-5.0);
-            % xl_bu_2 = ones(1, obj.r) * 10.0;
-            
-            
-            
+            % xl_bl_2 = ones(1, obj.r) * (-pi/2 + 1e-3); % 1e-6
+            % xl_bu_2 = ones(1, obj.r) * (pi/2 -  1e-3);
             obj.xl_bl = [xl_bl_1, xl_bl_2];
             obj.xl_bu = [xl_bu_1, xl_bu_2];
             
@@ -64,74 +56,73 @@ classdef smd6mp
             xu1 = xu(:, 1 : obj.p);
             xu2 = xu(:, obj.p + 1: obj.p + obj.r);
             
-            xl1 = xl(:, 1 : obj.q + obj.s);
-            xl2 = xl(:, obj.q + obj.s+1 : obj.q + obj.s +obj.r);
-            
-            %-obj
-          
-            
+            xl1 = xl(:, 1 : obj.q);
+            xl2 = xl(:, obj.q+1 : obj.q+obj.r);
             
             xu_prime2 = zeros(1, obj.r);   % checked with smd4
-            reg = 10; % absolute value of lower bound of xl2
+            reg = 1; % absolute value of lower bound of xl2
             t = 0.1 * tan(pi/2 - 0.01 - (abs(xu(:, obj.p+1 : end) )- xu_prime2) * pi/(2 * reg));
             
+            
+            %-obj
+            c = zeros(size(xu2));
             f = sum((xu1).^2, 2) ...
-                + sum(xl1.^2, 2) ...
-                + sum((xu2).^2, 2) ...
+                + sum((xl1).^2, 2) ...
+                + sum((xu2 - c).^2, 2) ...
                 - sum( (xl2 - t).^2, 2);
-            % - sum((xu2 - xl2).^2, 2);
-            % -cie
-            c = [];
+            % + sum((xu2.^2 - tan(xl2)).^2, 2);
+            %-cie
+            c = [];   
         end
         
         function [f, c] = evaluate_l(obj, xu, xl)
             xu1 = xu(:, 1 : obj.p);
             xu2 = xu(:, obj.p + 1: obj.p + obj.r);
             
-            xl1 = xl(:, 1 : obj.q + obj.s);
-            xl2 = xl(:, obj.q + obj.s+1 : obj.q + obj.s +obj.r);
+            xl1 = xl(:, 1 : obj.q);
+            xl2 = xl(:, obj.q+1 : obj.q+obj.r);
             
-            xu_prime2 = zeros(1, obj.r);   % checked with smd4
-            reg = 10; % absolute value of lower bound of xl2
+            xu_prime2 = zeros(1, obj.r);    % checked with smd4
+            reg = 1;                        % absolute value of lower bound of xl2
             t = 0.1 * tan(pi/2 - 0.01 - (abs(xu(:, obj.p+1 : end) )- xu_prime2) * pi/(2 * reg));
             
             
+            
             %-obj
-            term2 = sum(xl1(:,1:obj.q).^2, 2);
-            for i=obj.q+1 : 2 : obj.q + obj.s-1
-                term2 = term2 + (xl1(:, i+1) - xl1(:, i)).^2;
-            end
-            
             f = sum((xu1).^2, 2) ...
-                + term2 ...
+                + obj.q + sum(xl1.^2 - cos(2*pi*xl1), 2) ...
                 + sum( (xl2 - t).^2, 2);
-            % + sum((xu2 - xl2).^2, 2);
+            % + sum((xu2.^2 - tan(xl2)).^2, 2);
             
-            fmp = mp_module_smd6only(obj, xu, xl);
+            fmp = mp_module(obj, xu, xl);
             f = f - fmp;
             
             %-cie
-            c=[];
+            c = [];
+            
+            
         end
         
         function xl_prime = get_xlprime(obj, xu)
             n = size(xu, 1);
             xl_prime = zeros(n, obj.n_lvar);
-            for i = 1:obj.q + obj.s
+            for i = 1:obj.q
                 xl_prime(:, i) = 0;
             end
             
             xu_prime2 = zeros(1, obj.r);
-            reg = 10; % absolute value of  lower bound of xl2
+            reg = 1; % absolute value of  lower bound of xl2
             t = 0.1 * tan(pi/2 - 0.01 - (abs(xu(:, obj.p+1 : end) )- xu_prime2) * pi/(2 * reg));
             
             j = 1;
-            for i = obj.q + obj.s + 1 : obj.q + obj.r + obj.s
+            for i = obj.q + 1 : obj.q + obj.r
                 % xl_prime(:,i) = exp(xu(:, obj.p+ j));
                 xl_prime(:, i) =t(:, j);
                 
                 j = j + 1;
             end
         end
+        
+        
     end
 end
