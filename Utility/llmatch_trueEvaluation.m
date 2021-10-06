@@ -42,6 +42,7 @@ xu_init          = repmat(xu, init_size, 1);
 %-------------------------------------------------
 opts = optimset('fmincon');
 funh_obj = @(x)objective_func(prob, xu, x);
+% funh_obj = @(x)objective_func_extended(prob, xu, x);
 funh_con = @(x)constraint_func(prob, xu, x);
 
 
@@ -109,22 +110,24 @@ end
 lower_eval = lower_eval + size(train_fl, 1);
 
 % decide whether skip infill steps
-%if false
+% if false
 if ~isempty(lower_archive) && ~isempty(archive)  % when archive is passed in, means can do closeness check
     dist  = pdist2(xu , archive);                              % this xu is upper level new infill xu, not added into archive
     [~, idx] = sort(dist);
     r = corr(train_fl, lower_archive(idx(1), :)');
     
-
+    seed_xu = archive(idx(1), :);
     
-    if r>0.95 % skip infill
+    if r>0.97 % skip infill
         maxFE = 950;
         seed_xl = lower_xl(idx(1), :);
         [seed_fl, seed_fc] = prob.evaluate_l(xu, seed_xl);
         
-        %opts.Display = 'iter';
+        % opts.Display = 'iter';
+        % opts.Algorithm = 'sqp';
         opts.Display = 'off';
         opts.MaxFunctionEvaluations = maxFE;
+        opts.SpecifyObjectiveGradient = true;
         [match_xl, ~, ~, output] = fmincon(funh_obj, seed_xl, [], [],[], [],  ...
             prob.xl_bl, prob.xl_bu, funh_con,opts);        
         lower_eval = lower_eval + output.funcCount;
@@ -138,11 +141,12 @@ if ~isempty(lower_archive) && ~isempty(archive)  % when archive is passed in, me
        %  n_fev = n_fev + size(train_xl, 1);
        
        
-        % prime_xl = prob.get_xlprime(xu);
-        % d = sqrt(sum((prime_xl - match_xl).^2));
-        % if d > 1e-3 % plot seed and returned x
-        %      plot2dlower( xu, prob.xl_bl, prob.xl_bu, match_xl, seed_xl, prob)
-        % end
+%         prime_xl = prob.get_xlprime(xu);
+%         d = sqrt(sum((prime_xl - match_xl).^2))
+%         if r< 0.96
+%         % if d > 1e-3 % plot seed and returned x
+%             plot2dlower( xu, prob.xl_bl, prob.xl_bu, match_xl, seed_xl, prob, seed_xu)
+%         end
         return
     end
 end
@@ -198,22 +202,14 @@ else
     
     [match_xl, ~ , flag, ~] =  localsolver_startselection(additional_searchxl, additional_searchfl, additional_searchcl);
     
+
+%     xl_prime = prob.get_xlprime(xu);
+%     if sqrt(sum((xl_prime - match_xl).^2)) > 1e-2
+%         plot2dlower( xu, lb, ub, match_xl, [], prob)
+%     end
+    end
 end
 
-% save lower level
-% llcmp = true;
-llcmp = false;
-if llcmp
-    % only for SO
-    if size(train_fl, 2) ==  1
-        arc_xl                = [arc_xl; match_xl];
-        [local_fl, local_fc]  = prob.evaluate_l(xu, match_xl);
-        arc_fl                = [arc_fl; local_fl];
-        arc_cl                = [arc_cl; local_fc];
-    end
-    savelower(prob,arc_xl, arc_fl, arc_cl, method, seed);
-end
-end
 
 
 
@@ -296,8 +292,14 @@ c = [];
 ce = [];
 end
 
+function [f, gradient] = objective_func_extended(prob, xu, xl)
+f = prob.evaluate_l(xu, xl);
+gradient = prob.lower_gradient(xu, xl);
 
-function plot2dlower( xu, lb, ub, match_xl, seed_xl, prob)
+end
+
+
+function plot2dlower( xu, lb, ub, match_xl, seed_xl, prob, seed_xu)
 
 fignh = figure(3);
 nt                  = 100;
@@ -316,13 +318,27 @@ fl = reshape(fl, [nt, nt]);
 fl_seed = prob.evaluate_l(xu, seed_xl);
 fl_match = prob.evaluate_l(xu, match_xl);
 
+subplot(1,2,1);
 surf(msx1, msx2, fl, 'FaceAlpha',0.5, 'EdgeColor', 'none'); hold on;
 scatter3(seed_xl(1), seed_xl(2), fl_seed,  80, 'r', 'filled' ); hold on;
 scatter3(match_xl( 1), match_xl( 2), fl_match,  80, 'g', 'filled' ); hold on;
+
+subplot(1,2,2);
+xum = repmat(seed_xu, nt*nt, 1);
+fl = prob.evaluate_l(xum, xl);
+fl = reshape(fl, [nt, nt]);
+fl_seed = prob.evaluate_l(seed_xu, seed_xl);
+surf(msx1, msx2, fl, 'FaceAlpha',0.5, 'EdgeColor', 'none'); hold on;
+scatter3(seed_xl(1), seed_xl(2), fl_seed,  80, 'r', 'filled' ); hold on;
+
 
 pause(1);
 close(fignh);
 
 
+end
+
+function localsearch_cheat(prob, seed_xl)
+% this cheating solution is 
 end
 

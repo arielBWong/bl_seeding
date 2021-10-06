@@ -4,10 +4,10 @@ function blmapping_main(problem_str, seed, extended, varargin)
 
 % parse input
 p = inputParser;
-addRequired(p,   'problem_str');
-addRequired(p,   'seed');
-addRequired(p,   'extended');
-addParameter(p, 'local_str', 'vanilla');
+addRequired(p, 'problem_str');
+addRequired(p, 'seed');
+addRequired(p, 'extended');
+addParameter(p,'local_str', 'vanilla');
 addParameter(p, 'restart_num', 0);
 addParameter(p, 'use_seeding', false);
 parse(p, problem_str, seed, extended,  varargin{:});
@@ -21,7 +21,7 @@ use_seeding = p.Results.use_seeding;
 rx = p.Results.restart_num; 
 %---
 
-visualize = true;
+visualize = false;
 if visualize
     fighn = figure('Position', [100 100 800 800]);
     h1     = subplot(2, 2, 1);
@@ -44,7 +44,7 @@ normhn = str2func('normalization_z');
 % lower level settings
 llmatch_p.prob                 = prob;
 llmatch_p.egostr              = infill_metodstr;
-llmatch_p.egofnormstr    = 'normalization_z';    %  Only for place holder/ original Believer and EGO will need
+llmatch_p.egofnormstr         = 'normalization_z';    %  Only for place holder/ original Believer and EGO will need
 llmatch_p.seed                 = seed;
 llmatch_p.localsearch      = localsearch;
 llmatch_p.method           = method;
@@ -81,47 +81,44 @@ end
 
 
 %---xu evaluation
-[fu, cu]                 = prob.evaluate_u(xu, xl);
+[fu, cu]                    = prob.evaluate_u(xu, xl);
 [fl,  cl]                  = prob.evaluate_l(xu, xl);
 
 % -- archive all evaluated
 archive.xu     = xu;
 archive.xl     = xl;
 archive.fu     = fu;
-archive.fl      = fl;
+archive.fl     = fl;
 archive.cu     = cu;
-archive.cl      = cl;
-archive.flag  = ones(inisize_u, 1);
+archive.cl     = cl;
+archive.flag   = ones(inisize_u, 1);
 
-krg_param.GPR_type              = 2;
-krg_param.no_trials              = 1;
+krg_param.GPR_type = 2;
+krg_param.no_trials = 1;
 
 %---- prepare mapping---
 param_ea.popsize = num_pop;
 param_ea.gen       = num_gen;
-% 
 
-% obj = VideoWriter('moving.avi');
-% obj.Quality= 100;
-% obj.FrameRate = 25;
-% open(obj);
+map_param.GPR_type = 2;
+map_param.no_trials = 1;
+
 
 % plot P1
 for iter = 1:numiter_u
-    fprintf('iterate %d', iter);
-    if extended
-        [model_xl, arc_trgxl] = creating_blmodel(archive, krg_param);
-    else
-        model_xl = [];
-        arc_trgxl = [];
-    end
-    % [newxu, ~] = Believer_nextExtended(archive, prob, param_ea, krg_param, model_xl, arc_trgxl, extended);
+    fprintf('xu infill iterate %d \n', iter);
+     
+    mapping_archive.x   = archive.xu;
+    mapping_archive.muf = archive.fl;
+    mapping_archive.mug = archive.cl;
+    mapping_bl = Train_GPR(archive.xu , archive.fl, map_param);
     
-   
     [newxu, ~] = Believer_nextUpdate(xu, fu, prob.xu_bu, prob.xu_bl, ...
-    num_pop, num_gen, cu, normhn);
-    
-    disp(newxu);
+                        num_pop, num_gen, cu, normhn);
+                    
+                    
+    pred_fl = Predict_GPR(mapping_bl, newxu, map_param, mapping_archive);
+    % disp(newxu);
     
     dist  = pdist2(newxu, archive.xu);
     [~, idx] = sort(dist);
@@ -133,11 +130,7 @@ for iter = 1:numiter_u
         
     else
         [newxl, n, ~, lower_archive]   = llmatch_keepdistance(newxu, llmatch_p, 'visualization', false, 'seed_xl', seed_xl, ...
-            'lower_archive', lower_archive, 'archive', archive);
-    end
-    if visualize
-        seed_xu = archive.xu(idx(1), :);
-        seedinglower_plot2D(h1, h2, h3, prob, newxu, newxl, seed_xu, seed_xl, archive, lower_archive, idx)
+            'lower_archive', lower_archive, 'archive', archive, 'pred_fl',pred_fl);
     end
     
     low_neval = low_neval + n;
@@ -250,7 +243,8 @@ fl = archive.fl;
 cu = archive.cu;
 cl = archive.cl;
 
-resultfolder = fullfile(pwd, 'resultfolder' );
+name = strcat('resultfolder_' , num2str(prob.n_lvar));
+resultfolder = fullfile(pwd, name);
 n = exist(resultfolder);
 if n ~= 7
     mkdir(resultfolder)
@@ -333,6 +327,34 @@ else
     
     
 end
+
+
+% check which one lower level goes wrong
+% whether it starts from where local search is misled
+fl_pp = [];
+for i = 1:size(fl, 1)
+    xl_prime = prob.get_xlprime(xu(i, :));   
+    fl_prime = prob.evaluate_l(xu(i, :), xl_prime);
+    fl_pp = [fl_pp; fl_prime];    
+end
+
+fl = [fl, fl_pp, abs(fl - fl_pp)];
+filename = strcat('loweAccuracy_seed_', num2str(seed), '.csv');
+savename = fullfile(resultfolder, filename);
+csvwrite(savename, fl);
+
+
+fu_pp = [];
+for i = 1:size(fl, 1)
+    xl_prime = prob.get_xlprime(xu(i, :));   
+    fu_prime = prob.evaluate_u(xu(i, :), xl_prime);
+    fu_pp = [fu_pp; fu_prime];    
+end
+
+fu = [fu, fu_pp, abs(fu - fu_pp)];
+filename = strcat('upperAccuracy_seed_', num2str(seed), '.csv');
+savename = fullfile(resultfolder, filename);
+csvwrite(savename, fl);
 
 
 end
@@ -499,6 +521,7 @@ end
 
 
 function save_postprocess(xu, xl, fu, fl, cu, cl, arc_flag, prob, seed, extended)
+
 resultfolder = fullfile(pwd, 'resultfolder' );
 n = exist(resultfolder);
 if n ~= 7
