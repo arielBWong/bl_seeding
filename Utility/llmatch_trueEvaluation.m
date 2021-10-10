@@ -110,8 +110,8 @@ end
 lower_eval = lower_eval + size(train_fl, 1);
 
 % decide whether skip infill steps
-% if false
-if ~isempty(lower_archive) && ~isempty(archive)  % when archive is passed in, means can do closeness check
+if false
+% if ~isempty(lower_archive) && ~isempty(archive)  % when archive is passed in, means can do closeness check
     dist  = pdist2(xu , archive);                              % this xu is upper level new infill xu, not added into archive
     [~, idx] = sort(dist);
     r = corr(train_fl, lower_archive(idx(1), :)');
@@ -164,7 +164,7 @@ ub = prob.xl_bu;
 num_xvar = prob.n_lvar;
 initmatrix = train_xl;
 
-[best_x, best_f, best_c, ~] = gsolver(funh_obj, num_xvar, lb, ub, initmatrix, funh_con, param, 'visualize', false);
+[best_x, best_f, best_c, ~] = gsolver(funh_obj, num_xvar, lb, ub, initmatrix, funh_con, param, 'visualize', true);
 s = 1;
 
 lower_eval = lower_eval +  param.gen * param.popsize;
@@ -192,7 +192,7 @@ else
         prob.xl_bl, prob.xl_bu, funh_con,opts);
     lower_eval = lower_eval + output.funcCount;
     % n_global                   = size(train_xl, 1);
-    %  n_fev                      = n_global +num_eval;       % one in a population is evaluated
+    %  n_fev                     = n_global +num_eval;       % one in a population is evaluated
     
     % --- avoid sqp overshooting problem
     [match_fl, match_cl]         = prob.evaluate_l(xu, match_xl); % lazy step, no FE should be counted here

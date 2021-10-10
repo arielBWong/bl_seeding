@@ -58,6 +58,11 @@ lower_xl = [];
 xu_probefl = [];
 lower_eval = 0;
 
+% obj = VideoWriter('moving.avi');
+% obj.Quality= 100;
+% obj.FrameRate = 25;
+% open(obj);
+
 [best_x, ~, ~, ~] = gsolver(funh_obj, num_xvar, lb, ub, initmatrix, funh_con, param,  'externalfunction', funh_external,  'visualize', false);
 
 
@@ -124,7 +129,7 @@ function  save_results(xu, xl, prob, seed, use_seeding, rx, lower_eval)
 [fl, cl] = prob.evaluate_l(xu, xl);
 
 
-resultfolder = fullfile(pwd, 'resultfolder' );
+resultfolder = fullfile(pwd, 'resultfolder_trueEval' );
 n = exist(resultfolder);
 if n ~= 7
     mkdir(resultfolder)
@@ -134,6 +139,7 @@ if use_seeding
     foldername = strcat(prob.name, '_seeding');
     foldername = strcat(prob.name, num2str(rx));
 else
+    % foldername = strcat(prob.name, '_global2');
     foldername = prob.name;
 end
 resultfolder = fullfile(resultfolder, foldername);

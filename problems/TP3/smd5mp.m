@@ -158,5 +158,9 @@ classdef smd5mp
             xl = [xl1, xl2];
             xl_prime = xl;
         end
+        
+        function xl_local = get_otherlocal(obj, xu)
+            xl_local = mp_othercenters(obj, xu);
+        end
     end
 end

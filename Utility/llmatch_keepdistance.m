@@ -17,7 +17,7 @@ addParameter(p,'seeding_only', false);                                     %  co
 addParameter(p,'restartn', 0);                                             %  additional restart times
 addParameter(p,'archive', []);                                             %  external archive
 addParameter(p,'pred_fl', []);                                             %  external archive
-
+addParameter(p, 'pred_mu', []);
 
 parse(p,upper_xu, lower_parameters, varargin{:});
 
@@ -30,7 +30,7 @@ rn = p.Results.restartn;
 lower_archive = p.Results.lower_archive;
 archive = p.Results.archive;
 pred_fl = p.Results.pred_fl;
-
+pred_mu = p.Results.pred_mu;
 %--------
 
 prob                   = llmatch_p.prob;
@@ -132,22 +132,24 @@ if ~isempty(lower_archive) && ~isempty(archive)  % when archive is passed in, me
         [match_xl, match_fl, flag, ~] =  localsolver_startselection(additional_searchxl, additional_searchfl, additional_searchcl);
         n_fev = n_fev + size(train_xl, 1);
         
-%         prime_xl = prob.get_xlprime(xu);
-%         d = sqrt(sum((prime_xl - match_xl).^2));
-%         
-%        
-%         if d > 0.01
-%             %             % check whether this returned value is close to other centers
-%             %             othercenters = prob.get_otherlocal(xu);
-%             %             for kk = 1:4
-%             %                 dkk = sqrt(sum((othercenters(kk, :) - match_xl).^2));
-%             %                 if dkk < d
-%             %                     fprintf('in local optimum\n');
-%             %                 end
-%             %
-%             %             end
-%             % General infill process
-%             % d2 = abs(match_fl - pred_fl)
+        prime_xl = prob.get_xlprime(xu);
+        d = sqrt(sum((prime_xl - match_xl).^2));
+        fprintf('theory distance: %0.4f \n', d);
+        d2 = abs(match_fl - pred_fl);
+       
+        %if d2 > pred_mu * 3
+        if d > 0.01
+            %             % check whether this returned value is close to other centers
+            othercenters = prob.get_otherlocal(xu);
+            for kk = 1:4
+                dkk = sqrt(sum((othercenters(kk, :) - match_xl).^2));
+                if dkk < d
+                    fprintf('in local optimum\n');
+                end
+                
+            end
+% %             % General infill process
+%            
 % 
 %             arc_xl               = train_xl;
 %             arc_fl               = train_fl;
@@ -157,7 +159,7 @@ if ~isempty(lower_archive) && ~isempty(archive)  % when archive is passed in, me
 %             nextx_hn             = str2func(propose_nextx);
 %             normhn               = str2func(norm_str);
 %             iter = 1;
-%             iter_size = 200 - n_fev;
+%             iter_size = 200 - n_fev - 30;
 %             fprintf('lower back to global infill \n');
 %             while size(arc_xl, 1) <= iter_size + init_size
 %                 
@@ -209,13 +211,26 @@ if ~isempty(lower_archive) && ~isempty(archive)  % when archive is passed in, me
 %             %fprintf('true iteration is %d\n', iter);
 %             
 %             [best_x, best_f, best_c, s] =  localsolver_startselection(arc_xl, arc_fl, arc_cl);
-%              match_xl = best_x;
-%              prime_xl = prob.get_xlprime(xu);
-%              d = sqrt(sum((prime_xl - match_xl).^2));
+%             maxFE = 30; 
+%             [match_xl, ~, num_eval] = ll_localsearch(best_x, best_f, best_c, s, xu, prob, maxFE);
+%             n_global                   = size(train_xl, 1);
+%             n_fev                      = n_fev + n_global + num_eval;       % one in a population is evaluated
 %             
+%             % --- avoid sqp overshooting problem
+%             [match_fl, match_cl]         = prob.evaluate_l(xu, match_xl); % lazy step, no FE should be counted here
+%             additional_searchxl           = [best_x; match_xl]; % variable name from copy paste
+%             additional_searchfl           = [best_f;  match_fl];
+%             additional_searchcl           = [best_c; match_cl];
 %             
-%         end
-%         
+%             [match_xl, ~ , flag, ~] =  localsolver_startselection(additional_searchxl, additional_searchfl, additional_searchcl);
+%              
+% %             % match_xl = best_x;
+% %              prime_xl = prob.get_xlprime(xu);
+% %              d = sqrt(sum((prime_xl - match_xl).^2));
+% %             
+%             
+        end
+        
         
         return
     end

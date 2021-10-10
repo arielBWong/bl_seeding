@@ -67,7 +67,7 @@ classdef smd3mp
             xl2 = xl(:, obj.q+1 : obj.q+obj.r);
             
             xu_prime2 = zeros(1, obj.r);   % checked with smd4
-            reg = 1; % absolute value of lower bound of xl2
+            reg = 10; % absolute value of lower bound of xl2
             t = 0.1 * tan(pi/2 - 0.01 - (abs(xu(:, obj.p+1 : end) )- xu_prime2) * pi/(2 * reg));
             
             
@@ -90,7 +90,7 @@ classdef smd3mp
             xl2 = xl(:, obj.q+1 : obj.q+obj.r);
             
             xu_prime2 = zeros(1, obj.r);    % checked with smd4
-            reg = 1;                        % absolute value of lower bound of xl2
+            reg = 10;                        % absolute value of lower bound of xl2
             t = 0.1 * tan(pi/2 - 0.01 - (abs(xu(:, obj.p+1 : end) )- xu_prime2) * pi/(2 * reg));
             
             
@@ -118,7 +118,7 @@ classdef smd3mp
             end
             
             xu_prime2 = zeros(1, obj.r);
-            reg = 1; % absolute value of  lower bound of xl2
+            reg = 10; % absolute value of  lower bound of xl2
             t = 0.1 * tan(pi/2 - 0.01 - (abs(xu(:, obj.p+1 : end) )- xu_prime2) * pi/(2 * reg));
             
             j = 1;

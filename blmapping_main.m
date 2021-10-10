@@ -72,9 +72,9 @@ for i = 1:inisize_u
     fprintf('Initialition xu matching process iteration %d\n', i);
     [xl_single, n, ~, lower_archive]   = llmatch_keepdistance(xu(i, :), llmatch_p, 'visualization', false, 'lower_archive', lower_archive);
         
-%     lower_archive      = dummy_function(prob, xu(i, :), lower_archive);     
-%     xl_single              = prob.get_xlprime(xu(i, :));
-%      n                         = 0;
+
+     % xl_single              = prob.get_xlprime(xu(i, :));
+     % n                         = 0;
      xl                  = [xl; xl_single];
      n_FE                = n_FE + n;
 end
@@ -108,17 +108,19 @@ map_param.no_trials = 1;
 for iter = 1:numiter_u
     fprintf('xu infill iterate %d \n', iter);
      
-    mapping_archive.x   = archive.xu;
-    mapping_archive.muf = archive.fl;
-    mapping_archive.mug = archive.cl;
-    mapping_bl = Train_GPR(archive.xu , archive.fl, map_param);
-    
+%     mapping_archive.x   = archive.xu;
+%     mapping_archive.muf = archive.fl;
+%     mapping_archive.mug = archive.cl;
+%     mapping_bl = Train_GPR(archive.xu , archive.fl, map_param);
+%     
     [newxu, ~] = Believer_nextUpdate(xu, fu, prob.xu_bu, prob.xu_bl, ...
                         num_pop, num_gen, cu, normhn);
                     
                     
-    pred_fl = Predict_GPR(mapping_bl, newxu, map_param, mapping_archive);
+    % [pred_fl, pred_mu] = Predict_GPR(mapping_bl, newxu, map_param, mapping_archive);
     % disp(newxu);
+    
+    
     
     dist  = pdist2(newxu, archive.xu);
     [~, idx] = sort(dist);
@@ -130,7 +132,7 @@ for iter = 1:numiter_u
         
     else
         [newxl, n, ~, lower_archive]   = llmatch_keepdistance(newxu, llmatch_p, 'visualization', false, 'seed_xl', seed_xl, ...
-            'lower_archive', lower_archive, 'archive', archive, 'pred_fl',pred_fl);
+            'lower_archive', lower_archive, 'archive', archive); %, 'pred_fl',pred_fl, 'pred_mu', pred_mu);
     end
     
     low_neval = low_neval + n;
@@ -138,6 +140,13 @@ for iter = 1:numiter_u
     
     [newfu, newcu] = prob.evaluate_u(newxu, newxl);
     [newfl, newcl] = prob.evaluate_l(newxu, newxl);
+    
+    if visualize
+        map_blreal(h1, prob);
+        map_blpred(h2, mapping_bl, prob, map_param, mapping_archive)
+        vis_upper(h3, prob, archive, newxu, newfu);
+    end
+    
     
     % distance control
     distcheck_xu = [xu; newxu];
@@ -184,54 +193,7 @@ fl                    = fl';
 lower_archive.init_fl =[lower_archive.init_fl; fl];
 end
 
-%
-% for iter = 1:  numiter_u
-%     fprintf('upper iter %d\n', iter);
-%     if sum(arc_flag) >  size(arc_xu, 1)/2
-%
-%         if ul_flag < sum(arc_flag)  % rebuild mapping
-%             % ul_flag is used to constrol when to update mapping
-%             [mapping_bl, mapping_upper, mapping_lower] = create_mappingmodels(arc_xu, arc_xl, arc_fu, arc_fl, arc_flag);
-%         end
-%
-%         % apply mapping based infill
-%         [arc_xu, arc_fu, arc_xl, arc_fl, arc_cu, arc_cl, arc_flag] = mapbased_next(archive,...
-%             mapping_bl, mapping_upper, mapping_lower,  mapping_lowvar, prob, num_pop, num_gen, norm_str);
-%
-%
-%         % update the monitor to recreate mapping
-%         ul_flag = sum(arc_flag);
-%         % no evaluation on the lower level              n_FE                     = n_FE + 0;
-%
-%     else
-%         [newxu, ~]            = uppernext(xu, fu,  prob.xu_bu, prob.xu_bl, num_pop, num_gen, cu, norm_str);
-%
-%         [newxl, n, ~]         = llmatch_keepdistance(newxu, llmatch_p, visual, true);
-%         n_FE                     = n_FE + n;
-%
-%         % (5) flag 0
-%         arc_flag = [arc_flag; 1];  % update objective evaluation from lower search
-%         % --- true evaluation
-%         [newfu, newcu]                        = prob.evaluate_u(newxu, newxl);
-%         [newfl, newcl]                          = prob.evaluate_l(newxu, newxl); % redundant but necessary, due to lower level did not return f
-%         [arc_xu, arc_xl, arc_fu, arc_fl, arc_cu, arc_cl]                  = add_entry_extened(arc_xu, arc_xl, arc_fu, arc_fl, arc_cu, arc_cl,  newxu, newxl, newfu, newfl, newcu, newcl);
-%         [arc_xu, arc_xl, arc_fu, arc_fl, arc_cu, arc_cl, arc_flag]    = keepdistance_upperExtended(arc_xu, arc_xl, arc_fu, arc_fl, arc_cu, arc_cl, arc_flag, prob.xu_bu, prob.xu_bl);
-%
-%     end
-%
-%     % visualise
-%     if visualize
-%         [~, ~, ~, ~, index] = localsolver_startselection(arc_xu,  arc_fu, arc_cu);
-%         accuracy_fu = abs( arc_fu(index) -  prob.uopt);
-%         plot(iter, accuracy_fu, 'bo');
-%         xlim([1,  numiter_u]);
-%         hold on;
-%
-%     end
-%
-% end
 
-% save_postprocess(arc_xu, arc_xl, arc_fu, arc_fl, arc_cu, arc_cl, arc_flag, prob, seed);
 
 
 function  save_forextended(archive, prob, low_neval, seed, use_seeding, rx)
@@ -359,6 +321,70 @@ csvwrite(savename, fl);
 
 end
 
+
+function map_blreal(h1, prob)
+cla(h1);
+n = 50;
+x1_tst = linspace( prob.xu_bl(1), prob.xu_bu(1), n);
+x2_tst = linspace(prob.xu_bl(2), prob.xu_bu(2), n);
+
+[msx1, msx2]        = meshgrid(x1_tst, x2_tst);
+msx11 = msx1(:);
+msx22 = msx2(:);
+xu = [msx11, msx22];
+xl = prob.get_xlprime(xu);
+fl = prob.evaluate_l(xu, xl);
+fl = reshape(fl, [n, n]);
+
+axes(h1);
+
+surf(msx1, msx2, fl, 'FaceAlpha',0.5, 'EdgeColor', 'none'); hold on;
+
+
+end
+function map_blpred(subplothn, mapping_bl, prob, map_param, mapping_archive)
+cla(subplothn);
+n = 50;
+x1_tst = linspace( prob.xu_bl(1), prob.xu_bu(1), n);
+x2_tst = linspace(prob.xu_bl(2), prob.xu_bu(2), n);
+
+[msx1, msx2]        = meshgrid(x1_tst, x2_tst);
+msx11 = msx1(:);
+msx22 = msx2(:);
+xu = [msx11, msx22];
+fl =  Predict_GPR(mapping_bl, xu, map_param, mapping_archive);
+fl = reshape(fl, [n, n]);
+axes(subplothn);
+surf(msx1, msx2, fl, 'FaceAlpha',0.5, 'EdgeColor', 'none'); hold on;
+
+
+end
+
+
+function vis_upper(subplothn, prob, archive, newxu, newfu)
+cla(subplothn);
+n = 50;
+x1_tst = linspace( prob.xu_bl(1), prob.xu_bu(1), n);
+x2_tst = linspace(prob.xu_bl(2), prob.xu_bu(2), n);
+
+[msx1, msx2]        = meshgrid(x1_tst, x2_tst);
+msx11 = msx1(:);
+msx22 = msx2(:);
+xu = [msx11, msx22];
+xl = prob.get_xlprime(xu);
+fu = prob.evaluate_u(xu, xl);
+fu = reshape(fu, [n, n]);
+
+axes(subplothn);
+
+surf(msx1, msx2, fu, 'FaceAlpha',0.5, 'EdgeColor', 'none'); hold on;
+scatter3(archive.xu(:, 1), archive.xu(:, 2), archive.fu, 80, 'r', 'filled');
+scatter3(newxu(:, 1), newxu(:, 2), newfu, 80, 'g', 'filled');
+
+
+
+end
+
 function plotlower(prob, newxu)
 n = 50;
 xl1 = linspace( prob.xl_bl(1), prob.xl_bu(1), n);
@@ -381,126 +407,6 @@ pause(1);
 close;
 end
 
-function plot_matchingaccuracy(prob, arc_xu, arc_xl, arc_fl, arc_flag, mapping_bl, mapping_upper, mapping_lower,  mapping_lowvar)
-
-n = 50;
-xu1 = linspace( prob.xu_bl(1), prob.xu_bu(1), n);
-xu2 = linspace(prob.xu_bl(2), prob.xu_bu(2), n);
-
-fl_training = arc_fl(arc_flag==1,:);
-
-[xu11, xu22] = meshgrid(xu1, xu2);
-fl= zeros(n, n);
-fl_mapping= zeros(n, n);
-for i = 1: n
-    for j =1: n
-        xuu = [xu11(i, j), xu22(i, j)];
-        
-        [xl(i, j), ~] = Predict_DACE(mapping_lowvar{2}, xuu, 0);
-        xl_real = prob. get_xlprime(xuu);
-    end
-end
-subplot(2, 2 , 1);
-surf(xu11, xu22, xl, 'FaceAlpha',0.5, 'EdgeColor', 'none'); hold on;
-
-subplot(2, 2 , 2);
-surf(xu11, xu22, xl_real, 'FaceAlpha',0.5, 'EdgeColor', 'none'); hold on;
-
-
-
-
-%
-% subplot(1, 3 , 2);
-% surf(xu11, xu22, fl_mapping, 'FaceAlpha',0.5, 'EdgeColor', 'none'); hold on;
-%
-%
-% %
-% %
-% [xu11, xu22] = meshgrid(xu1, xu2);
-% fl_mapping= zeros(n, n);
-% for i = 1: n
-%     for j =1: n
-%         xuu = [xu11(i, j), xu22(i, j)];
-%
-%         % init for local search
-%         % dist = pdist2(xuu, arc_xu);
-%         % [~, ind] =sort(dist);
-%         % x0 = arc_xl(ind(1), :);
-%         x0= [];
-%         for k = 1:length(mapping_lowvar)
-%             [x, ~] = Predict_DACE(mapping_lowvar{k}, xuu, 0);
-%             x0 = [x0, x];
-%         end
-%         x0 = boundary_check(x0, prob.xl_bu, prob.xl_bl);
-%         %
-%         %[fl_bound, ~] = Predict_DACE(mapping_bl{1}, xuu, 0);
-%
-% %         options = optimset('Algorithm','sqp','Display','off');
-% %         [xl, ~, ~, out] = fmincon(@(xl)obj(xuu, xl, mapping_upper), ...
-% %             x0, ... %x0
-% %             [], ... % A
-% %             [], ... % b
-% %             [], ... % Aeq
-% %             [], ... % beq
-% %             prob. xl_bl, ...
-% %             prob. xl_bu, ...
-% %             @(xl)cons(xuu, xl, mapping_lower, fl_bound),...
-% %             options);
-%
-%         fl_mapping(i, j) = prob.evaluate_l(xuu, x0);
-%     end
-% end
-% subplot(1, 3, 3);
-% surf(xu11, xu22, fl_mapping, 'FaceAlpha',0.5, 'EdgeColor', 'none'); hold on;
-%
-%
-
-end
-
-
-function plot_matching(prob)
-n = 50;
-xu= linspace( prob.xu_bl(1), prob.xu_bu(1), n);
-xl =linspace( prob.xl_bl(1), prob.xl_bu(1), n);
-
-[xu11, xu22] = meshgrid(xu, xl);
-fu= zeros(n, n);
-for i = 1: n
-    for j =1: n
-        fu(i, j) =prob.evaluate_u(xu11(i, j), xu22(i, j));
-        
-    end
-end
-
-surf(xu11, xu22, fu, 'FaceAlpha',0.5, 'EdgeColor', 'none'); hold on;
-
-a = 0;
-
-end
-
-function plot_MOupper(prob)
-n = 50;
-xu1= linspace( prob.xu_bl(1), prob.xu_bu(1), n);
-xu2=linspace( prob.xu_bl(2), prob.xu_bu(2), n);
-
-[xu11, xu22] = meshgrid(xu1, xu2);
-fu= zeros(n, n);
-for i = 1: n
-    for j =1: n
-        xu = [xu11(i, j), xu22(i, j)];
-        xl = prob.get_xlprime(xu);
-        f =prob.evaluate_u(xu, xl);
-        fu(i, j) = f(1);
-    end
-end
-
-surf(xu11, xu22, fu, 'FaceAlpha',0.5, 'EdgeColor', 'none'); hold on;
-xlabel('xu1');
-ylabel('xu2');
-a = 0;
-
-end
-
 
 
 
@@ -520,66 +426,6 @@ c = fl - fl_bound;
 end
 
 
-function save_postprocess(xu, xl, fu, fl, cu, cl, arc_flag, prob, seed, extended)
-
-resultfolder = fullfile(pwd, 'resultfolder' );
-n = exist(resultfolder);
-if n ~= 7
-    mkdir(resultfolder)
-end
-if extended == true
-    folder = strcat(prob.name, '_ext');
-else
-    folder = prob.name;
-end
-resultfolder = fullfile(resultfolder, folder);
-n = exist(resultfolder);
-if n ~= 7
-    mkdir(resultfolder)
-end
-
-
-
-filename = strcat('xu_seed_', num2str(seed), '.csv');
-savename = fullfile(resultfolder, filename);
-csvwrite(savename, xu);
-
-filename = strcat('xl_seed_', num2str(seed), '.csv');
-savename = fullfile(resultfolder, filename);
-csvwrite(savename, xl);
-
-filename = strcat('fu_seed_', num2str(seed), '.csv');
-savename = fullfile(resultfolder, filename);
-csvwrite(savename, fu);
-
-filename = strcat('fl_seed_', num2str(seed), '.csv');
-savename = fullfile(resultfolder, filename);
-csvwrite(savename, fl);
-
-filename = strcat('cu_seed_', num2str(seed), '.csv');
-savename = fullfile(resultfolder, filename);
-csvwrite(savename, cu);
-
-
-filename = strcat('cl_seed_', num2str(seed), '.csv');
-savename = fullfile(resultfolder, filename);
-csvwrite(savename, cl);
-
-
-filename = strcat('flag_seed_', num2str(seed), '.csv');
-savename = fullfile(resultfolder, filename);
-csvwrite(savename, arc_flag);
-
-[~, ~, ~, ~, index] = localsolver_startselection(xu,  fu, cu);
-accuracy_fu = abs( fu(index) -  prob.uopt);
-accuracy_fl = abs(fl(index) - prob.lopt);
-
-accuracy = [accuracy_fu, accuracy_fl];
-filename = strcat('accuracy_seed_', num2str(seed), '.csv');
-savename = fullfile(resultfolder, filename);
-csvwrite(savename, accuracy);
-
-end
 
 
 

@@ -137,5 +137,9 @@ classdef smd7mp
                 j = j + 1;
             end
         end
+        
+        function xl_local = get_otherlocal(obj, xu)
+            xl_local = mp_othercenters(obj, xu);
+        end
     end
 end

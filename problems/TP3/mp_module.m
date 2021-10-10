@@ -12,7 +12,7 @@ xl_center= prob.get_xlprime(xu);
 
 
 nx    = size(xu, 1);
-w     = ones(np, 1) * 0.01; % width
+w     = ones(np, 1) * 0.02; % width 0.001 for 3d
 h      = ones(np, 1) * 50; % height
 h(1)  = 70;
 

@@ -69,7 +69,7 @@ classdef smd8mp
                 term2 = term2 + (xl1(:, i+1) - xl1(:, i).^2).^2 + (xl1(:, i) - 1).^2;
             end
             
-            xu_prime2 = ones(1, obj.r);            
+            xu_prime2 = zeros(1, obj.r);            
             reg = 10;                   % absolute value of  lower bound of xl2        
             t = 0.1 * tan(pi/2 - 0.01 - (abs(xu(:, obj.p+1 : end) )- xu_prime2) * pi/(2 * reg));
             
@@ -95,7 +95,7 @@ classdef smd8mp
                 term2 = term2 + (xl1(:, i+1) - xl1(:, i).^2).^2 + (xl1(:,i) - 1).^2;
             end
             
-            xu_prime2 = ones(1, obj.r);            
+            xu_prime2 = zeros(1, obj.r);            
             reg = 10;                   % absolute value of  lower bound of xl2        
             t = 0.1 * tan(pi/2 - 0.01 - (abs(xu(:, obj.p+1 : end) )- xu_prime2) * pi/(2 * reg));
             %-obj
@@ -118,7 +118,7 @@ classdef smd8mp
                 xl_prime(:, i) = 0;
             end
             
-            xu_prime2 = ones(1, obj.r);            
+            xu_prime2 = zeros(1, obj.r);            
             reg = 10;                   % absolute value of  lower bound of xl2        
             t = 0.1 * tan(pi/2 - 0.01 - (abs(xu(:, obj.p+1 : end) )- xu_prime2) * pi/(2 * reg));
             

@@ -18,10 +18,14 @@ addpath(problem_folder);
 problem_folder = strcat(pwd,'/Utility');
 addpath(problem_folder);
 
-problems = {'smd5mp(1, 1, 1)' , 'smd7mp(1, 1, 1)',  'smd8mp(1, 1, 1)'};
+problems = {'smd5mp(1, 1, 1)' , 'smd7mp(1, 1, 1)',  'smd8mp(1, 1, 1)', ...
+    'smd1mp(1, 1, 1)' , 'smd2mp(1, 1, 1)',  'smd3mp(1, 1, 1)', ...
+    'smd4mp(1, 1, 1)', 'smd6mp(1, 0, 1, 1)', };
 % tic;
-% blmapping_trueEvaldemo('smd7mp(1, 1, 1)',  2, 'use_seeding', false, 'restart_num', 1);
+blmapping_trueEvaldemo('smd7mp(1, 1, 1)',  13, 'use_seeding', false, 'restart_num', 1);
 % toc;
+
+% problems = { 'smd8mp(1, 1, 1)'};
 
 % --------
 seeds = 1:29;

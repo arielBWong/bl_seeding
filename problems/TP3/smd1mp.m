@@ -106,6 +106,17 @@ classdef smd1mp
             
         end
         
+        function [g] = lower_gradient(obj, xu, xl)
+            
+            xu_prime2 = zeros(1, obj.r);   % checked with smd4
+            reg = 10; % absolute value of lower bound of xl2
+            t = 0.1 * tan(pi/2 - 0.01 - (abs(xu(:, obj.p+1 : end) )- xu_prime2) * pi/(2 * reg));
+            
+            gradient1 = 2 * xl(1);
+            gradient2 = 2 * (xl(2) - t);
+            g = [gradient1; gradient2];
+        end
+        
         function xl_prime = get_xlprime(obj, xu)
             n = size(xu, 1);
             xl_prime = zeros(n, obj.n_lvar);

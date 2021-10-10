@@ -21,6 +21,8 @@ for i=1:length(gprMdl)
         id=find(d==0);
         if ~isempty(id)
             tmp_mu(j)=response(id,i);
+            
+            
             tmp_sigma(j)=0;
         end
     end    
