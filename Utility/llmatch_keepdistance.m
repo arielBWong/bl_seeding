@@ -33,17 +33,18 @@ pred_fl = p.Results.pred_fl;
 pred_mu = p.Results.pred_mu;
 %--------
 
-prob                   = llmatch_p.prob;
-num_pop            = llmatch_p.num_pop;
-num_gen             = llmatch_p.num_gen;
-propose_nextx    = llmatch_p.egostr;
-init_size               = llmatch_p.egoinitsize;
-iter_size               = llmatch_p.egoitersize;
+prob                 = llmatch_p.prob;
+num_pop              = llmatch_p.num_pop;
+num_gen              = llmatch_p.num_gen;
+propose_nextx        = llmatch_p.egostr;
+init_size            = llmatch_p.egoinitsize;
+iter_size            = llmatch_p.egoitersize;
 norm_str             = llmatch_p.egofnormstr;
 localsearch          = llmatch_p.localsearch;
 method               = llmatch_p.method;
-seed                    = llmatch_p.seed;
+seed                 = llmatch_p.seed;
 
+flag = 0;
 
 l_nvar           = prob.n_lvar;
 upper_bound      = prob.xl_bu;
@@ -52,7 +53,7 @@ xu_init          = repmat(xu, init_size, 1);
 
 %-- lower level initialization
 if ~isempty(lower_archive)                % for lower level archive 
-    train_xl = lower_archive.init_xl;
+    train_xl        = lower_archive.init_xl;
 else
     train_xl        = lhsdesign(init_size,l_nvar,'criterion','maximin','iterations',1000);
     train_xl        = repmat(lower_bound, init_size, 1) ...
@@ -115,12 +116,22 @@ lower_archive.init_fl = [lower_archive.init_fl; train_fl'];
 
 % decide whether skip infill steps
 if ~isempty(lower_archive) && ~isempty(archive)  % when archive is passed in, means can do closeness check
-    dist  = pdist2(xu , archive.xu);      % this xu is upper level new infill xu, not added into archive
+    
+    dist  = pdist2(xu , archive.xu);             % this xu is upper level new infill xu, not added into archive
     [~, idx] = sort(dist);
     r = corr(train_fl, lower_archive.init_fl(idx(1), :)');
     
+    switch_indicator = transfer_decision(xu, archive,lower_archive, train_fl);
+    r = switch_indicator.pearson;
+    
+    fprintf('pearson r:     %0.4f \n', r);
+    fprintf('distan ce  f:  %0.4f \n', switch_indicator.dist);
+    fprintf('kurtosis  now: %0.4f, closest %0.4f \n', switch_indicator.kurtosis);
+    fprintf('skewness  now: %0.4f, closest %0.4f \n', switch_indicator.skewness);
+    
     if r>0.97 % skip infill
-        maxFE = 170;
+ 
+        maxFE = 200 - init_size ;
         [seed_fl, seed_fc]            = prob.evaluate_l(xu, seed_xl);
         [match_xl, ~, num_eval]       = ll_localsearch(seed_xl, seed_fl, seed_fc, true, xu, prob, maxFE);
         n_fev = num_eval + 1;
@@ -132,104 +143,150 @@ if ~isempty(lower_archive) && ~isempty(archive)  % when archive is passed in, me
         [match_xl, match_fl, flag, ~] =  localsolver_startselection(additional_searchxl, additional_searchfl, additional_searchcl);
         n_fev = n_fev + size(train_xl, 1);
         
-        prime_xl = prob.get_xlprime(xu);
-        d = sqrt(sum((prime_xl - match_xl).^2));
-        fprintf('theory distance: %0.4f \n', d);
-        d2 = abs(match_fl - pred_fl);
-       
-        %if d2 > pred_mu * 3
-        if d > 0.01
-            %             % check whether this returned value is close to other centers
-            othercenters = prob.get_otherlocal(xu);
-            for kk = 1:4
-                dkk = sqrt(sum((othercenters(kk, :) - match_xl).^2));
-                if dkk < d
-                    fprintf('in local optimum\n');
-                end
-                
-            end
-% %             % General infill process
-%            
-% 
-%             arc_xl               = train_xl;
-%             arc_fl               = train_fl;
-%             arc_cl               = train_fc;
+%         prime_xl = prob.get_xlprime(xu);
+%         d = sqrt(sum((prime_xl - match_xl).^2));
+%         fprintf('theory distance: %0.4f \n', d);
+%         d2 = abs(match_fl - pred_fl);
+% %        
+% %         %if d2 > pred_mu * 3
+%         if d > 0.01
 %             
-%             % call EIM to expand train xl one by one
-%             nextx_hn             = str2func(propose_nextx);
-%             normhn               = str2func(norm_str);
-%             iter = 1;
-%             iter_size = 200 - n_fev - 30;
-%             fprintf('lower back to global infill \n');
-%             while size(arc_xl, 1) <= iter_size + init_size
-%                 
-%                 if size(arc_xl, 1) == iter_size + init_size
-%                     break;
-%                 end
-%                 % fprintf('iteration %d\n', iter);
-%                 
-%                 % evaluate dace compatibility
-%                 [train_xl, train_fl, train_fc, ~] ...
-%                     = data_prepare(train_xl, train_fl, train_fc);
-%                 % fprintf('surrogate training data size %d\n', size(train_xl, 1));
-%                 % if eim propose next xl
-%                 % lower level is single objective so no normalization method is needed
-%                 [new_xl, infor]  = nextx_hn(train_xl, train_fl, upper_bound, lower_bound, ...
-%                     num_pop, num_gen, train_fc, normhn, prob);
-%                 
-%                 % local search on surrogate
-%                 % evaluate next xl with xu
-%                 [new_fl, new_fc] = prob.evaluate_l(xu, new_xl);
-%                 
-%                 % visualization
-%                 if l_nvar == 1 && visualization
-%                     processplot1d(fighn, train_xl, train_fl, infor.krg, prob, new_xl); end
-%                 if l_nvar == 2 && visualization %&& localsearch == false
-%                     plotlocalKprocess2D(fighn, prob, train_xl, train_fl, infor.krg, infor.krgc, ...
-%                         new_xl, new_fl, infor.arc_obj, infor.arc_c, xu);
-%                 end
-%                 
-%                 %-----------------------------
-%                 train_xl = [train_xl; new_xl];
-%                 train_fl = [train_fl; new_fl];
-%                 train_fc = [train_fc; new_fc];  % compatible with nonconstraint
-%                 
-%                 [train_xl,train_fl, train_fc]...
-%                     = keepdistance(train_xl,train_fl, train_fc, prob.xl_bu, prob.xl_bl);
-%                 
-%                 arc_xl   = [arc_xl; new_xl];
-%                 arc_fl   = [arc_fl; new_fl];
-%                 arc_cl   = [arc_cl; new_fc];
-%                 
-%                 
-%                 if size(arc_xl, 1) == iter_size + init_size
-%                     break;
-%                 end
-%                 
-%                 iter = iter + 1;
-%             end
-%             %fprintf('true iteration is %d\n', iter);
+%             flag = 0; % means local search fail
 %             
-%             [best_x, best_f, best_c, s] =  localsolver_startselection(arc_xl, arc_fl, arc_cl);
-%             maxFE = 30; 
-%             [match_xl, ~, num_eval] = ll_localsearch(best_x, best_f, best_c, s, xu, prob, maxFE);
-%             n_global                   = size(train_xl, 1);
-%             n_fev                      = n_fev + n_global + num_eval;       % one in a population is evaluated
+%             d1 = sqrt(sum((prime_xl - seed_xl).^2));
+%             fprintf('seed to optimum: %0.4f \n', d1);
+%             d1 = sqrt(sum((match_xl - seed_xl).^2));
+%             fprintf('seed to found optimal: %0.4f \n', d1);
 %             
-%             % --- avoid sqp overshooting problem
-%             [match_fl, match_cl]         = prob.evaluate_l(xu, match_xl); % lazy step, no FE should be counted here
-%             additional_searchxl           = [best_x; match_xl]; % variable name from copy paste
-%             additional_searchfl           = [best_f;  match_fl];
-%             additional_searchcl           = [best_c; match_cl];
+%             % fprintf('seed point is type %d \n', archive.artifical_flag(idx(1)));
 %             
-%             [match_xl, ~ , flag, ~] =  localsolver_startselection(additional_searchxl, additional_searchfl, additional_searchcl);
-%              
-% %             % match_xl = best_x;
-% %              prime_xl = prob.get_xlprime(xu);
-% %              d = sqrt(sum((prime_xl - match_xl).^2));
+%             fignh = figure('Position', [100 100 800 800]);
+%             subplot(2, 2, 1);
+%             plot(train_fl, 'ro'); hold on;
+%             plot(lower_archive.init_fl(idx(1), :)', 'b*');
+%             
+%             subplot(2, 2, 3);
+%             n = 50;
+%             x1_tst = linspace(prob.xl_bl(1), prob.xl_bu(1), n);
+%             x2_tst = linspace(prob.xl_bl(2), prob.xl_bu(2), n);
+%             
+%             [msx1, msx2]        = meshgrid(x1_tst, x2_tst);
+%             msx11 = msx1(:);
+%             msx22 = msx2(:);
+%             xll = [msx11, msx22];           
+%             xuu = repmat(xu, n*n, 1);
+%             
+%             fll = prob.evaluate_l(xuu, xll);
+%             fll = reshape(fll, [n, n]);
+%             surf(msx1, msx2, fll, 'FaceAlpha',0.5, 'EdgeColor', 'none'); hold on;
+%             scatter3(seed_xl(1), seed_xl(2), seed_fl,  80, 'g', 'filled');
+%             scatter3(match_xl(1), match_xl(2), match_fl,  80, 'b', 'filled');
+%             [prime_fl,~] = prob.evaluate_l(xu, prime_xl);
+%             scatter3(prime_xl(1), prime_xl(2), prime_fl,  80, 'r', 'filled');
+%             
+%             subplot(2, 2, 4);
+%             xuu = repmat(archive.xu(idx(1), :), n*n, 1);
+%             fll = prob.evaluate_l(xuu, xll);
+%             fll = reshape(fll, [n, n]);
+%             surf(msx1, msx2, fll, 'FaceAlpha',0.5, 'EdgeColor', 'none'); hold on;
+%             [previous_xl,~] = prob.evaluate_l(archive.xu(idx(1), :), seed_xl);
+%             scatter3(seed_xl(1), seed_xl(2), previous_xl,  80, 'r', 'filled');
+%             pause(1);
+%             close(fignh);
+% %             % check whether this returned value is close to other centers
+% %             othercenters = prob.get_otherlocal(xu);
+% %             for kk = 1:4
+% %                 dkk = sqrt(sum((othercenters(kk, :) - match_xl).^2));
+% %                 if dkk < d
+% %                     fprintf('in local optimum\n');
+% %                 end
+% %                 
+% %             end
+% % %             % General infill process
+% %            
+% % 
+% %             arc_xl               = train_xl;
+% %             arc_fl               = train_fl;
+% %             arc_cl               = train_fc;
 % %             
+% %             % call EIM to expand train xl one by one
+% %             nextx_hn             = str2func(propose_nextx);
+% %             normhn               = str2func(norm_str);
+% %             iter = 1;
+% %             iter_size = 200 - n_fev - 30;
+% %             fprintf('lower back to global infill \n');
+% %             while size(arc_xl, 1) <= iter_size + init_size
+% %                 
+% %                 if size(arc_xl, 1) == iter_size + init_size
+% %                     break;
+% %                 end
+% %                 % fprintf('iteration %d\n', iter);
+% %                 
+% %                 % evaluate dace compatibility
+% %                 [train_xl, train_fl, train_fc, ~] ...
+% %                     = data_prepare(train_xl, train_fl, train_fc);
+% %                 % fprintf('surrogate training data size %d\n', size(train_xl, 1));
+% %                 % if eim propose next xl
+% %                 % lower level is single objective so no normalization method is needed
+% %                 [new_xl, infor]  = nextx_hn(train_xl, train_fl, upper_bound, lower_bound, ...
+% %                     num_pop, num_gen, train_fc, normhn, prob);
+% %                 
+% %                 % local search on surrogate
+% %                 % evaluate next xl with xu
+% %                 [new_fl, new_fc] = prob.evaluate_l(xu, new_xl);
+% %                 
+% %                 % visualization
+% %                 if l_nvar == 1 && visualization
+% %                     processplot1d(fighn, train_xl, train_fl, infor.krg, prob, new_xl); end
+% %                 if l_nvar == 2 && visualization %&& localsearch == false
+% %                     plotlocalKprocess2D(fighn, prob, train_xl, train_fl, infor.krg, infor.krgc, ...
+% %                         new_xl, new_fl, infor.arc_obj, infor.arc_c, xu);
+% %                 end
+% %                 
+% %                 %-----------------------------
+% %                 train_xl = [train_xl; new_xl];
+% %                 train_fl = [train_fl; new_fl];
+% %                 train_fc = [train_fc; new_fc];  % compatible with nonconstraint
+% %                 
+% %                 [train_xl,train_fl, train_fc]...
+% %                     = keepdistance(train_xl,train_fl, train_fc, prob.xl_bu, prob.xl_bl);
+% %                 
+% %                 arc_xl   = [arc_xl; new_xl];
+% %                 arc_fl   = [arc_fl; new_fl];
+% %                 arc_cl   = [arc_cl; new_fc];
+% %                 
+% %                 
+% %                 if size(arc_xl, 1) == iter_size + init_size
+% %                     break;
+% %                 end
+% %                 
+% %                 iter = iter + 1;
+% %             end
+% %             %fprintf('true iteration is %d\n', iter);
+% %             
+% %             [best_x, best_f, best_c, s] =  localsolver_startselection(arc_xl, arc_fl, arc_cl);
+% %             maxFE = 30; 
+% %             [match_xl, ~, num_eval] = ll_localsearch(best_x, best_f, best_c, s, xu, prob, maxFE);
+% %             n_global                   = size(train_xl, 1);
+% %             n_fev                      = n_fev + n_global + num_eval;       % one in a population is evaluated
+% %             
+% %             % --- avoid sqp overshooting problem
+% %             [match_fl, match_cl]         = prob.evaluate_l(xu, match_xl); % lazy step, no FE should be counted here
+% %             additional_searchxl           = [best_x; match_xl]; % variable name from copy paste
+% %             additional_searchfl           = [best_f;  match_fl];
+% %             additional_searchcl           = [best_c; match_cl];
+% %             
+% %             [match_xl, ~ , flag, ~] =  localsolver_startselection(additional_searchxl, additional_searchfl, additional_searchcl);
+% %              
+% % %             % match_xl = best_x;
+% % %              prime_xl = prob.get_xlprime(xu);
+% % %              d = sqrt(sum((prime_xl - match_xl).^2));
+% % %             
+% %             
+%         else
+%             flag =  1; % flag is local search sucess
 %             
-        end
+%         end
         
         
         return
@@ -262,9 +319,10 @@ if localsearch
     localmodeling    = str2func(llmatch_p.localmethod);
 end
 
+% temporary  test
 
 iter = 1;
-fprintf('lower back to global infill \n');
+fprintf('lower  global infill \n');
 while size(arc_xl, 1) <= iter_size + init_size
     
     if size(arc_xl, 1) == iter_size + init_size
@@ -325,7 +383,7 @@ else
         error('local search does not apply to MO');
     end
     
-    maxFE = 100; % if this step is reached, it means previously there is no local search
+    maxFE = 200 - iter_size - init_size ; % if this step is reached, it means previously there is no local search
     [match_xl, ~, num_eval] = ll_localsearch(best_x, best_f, best_c, s, xu, prob, maxFE);
     n_global                   = size(train_xl, 1);
     n_fev                      = n_global +num_eval;       % one in a population is evaluated
@@ -336,11 +394,20 @@ else
     additional_searchfl           = [best_f;  match_fl];
     additional_searchcl           = [best_c; match_cl];
     
-    [match_xl, ~ , flag, ~] =  localsolver_startselection(additional_searchxl, additional_searchfl, additional_searchcl);
+    [match_xl, ~ , ~, ~] =  localsolver_startselection(additional_searchxl, additional_searchfl, additional_searchcl);
     
 end
 
-
+% prime_xl = prob.get_xlprime(xu);
+% d = sqrt(sum((prime_xl - match_xl).^2));
+% 
+% if d > 0.01
+%     fprintf('global search fails\n');
+%     flag = 3;
+% else
+%     fprintf('global search pass\n');
+%     flag = 4;
+% end
 
 
 % save lower level

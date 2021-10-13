@@ -23,14 +23,14 @@ rx = p.Results.restart_num;
 
 visualize = false;
 if visualize
-    fighn = figure('Position', [100 100 800 800]);
+    fighn  = figure('Position', [100 100 800 800]);
     h1     = subplot(2, 2, 1);
     h2     = subplot(2, 2, 3);
     h3     = subplot(2, 2, 4);
 end
 
 rng(seed, 'twister');
-eval('parameter_load');                                       % IMPORTANT,  variables are load externally
+eval('parameter_load2');                                       % IMPORTANT,  variables are load externally
 infill_metodstr = 'Believer_nextUpdate';
 n_FE = 0;                                                             % record lowerlevel FEs
 prob = eval(prob);
@@ -42,10 +42,10 @@ normhn = str2func('normalization_z');
 
 %plot_matching(prob);
 % lower level settings
-llmatch_p.prob                 = prob;
+llmatch_p.prob                = prob;
 llmatch_p.egostr              = infill_metodstr;
 llmatch_p.egofnormstr         = 'normalization_z';    %  Only for place holder/ original Believer and EGO will need
-llmatch_p.seed                 = seed;
+llmatch_p.seed                = seed;
 llmatch_p.localsearch      = localsearch;
 llmatch_p.method           = method;
 llmatch_p.localmethod    = [];
@@ -68,21 +68,21 @@ lower_archive.init_xl = train_xl;
 lower_archive.init_fl = [];
 
 %---xu match its xl and evaluate fu
+% artifical_flag = [];
 for i = 1:inisize_u
     fprintf('Initialition xu matching process iteration %d\n', i);
-    [xl_single, n, ~, lower_archive]   = llmatch_keepdistance(xu(i, :), llmatch_p, 'visualization', false, 'lower_archive', lower_archive);
-        
-
-     % xl_single              = prob.get_xlprime(xu(i, :));
-     % n                         = 0;
+    [xl_single, n, flag, lower_archive]   = llmatch_keepdistance(xu(i, :), llmatch_p, 'visualization', false, 'lower_archive', lower_archive);
+    % artifical_flag     = [artifical_flag; flag];
+     % xl_single         = prob.get_xlprime(xu(i, :));
+     % n                 = 0;
      xl                  = [xl; xl_single];
      n_FE                = n_FE + n;
 end
 
 
 %---xu evaluation
-[fu, cu]                    = prob.evaluate_u(xu, xl);
-[fl,  cl]                  = prob.evaluate_l(xu, xl);
+[fu, cu]                 = prob.evaluate_u(xu, xl);
+[fl,  cl]                = prob.evaluate_l(xu, xl);
 
 % -- archive all evaluated
 archive.xu     = xu;
@@ -91,7 +91,8 @@ archive.fu     = fu;
 archive.fl     = fl;
 archive.cu     = cu;
 archive.cl     = cl;
-archive.flag   = ones(inisize_u, 1);
+
+% archive.artifical_flag = artifical_flag;
 
 krg_param.GPR_type = 2;
 krg_param.no_trials = 1;
@@ -115,26 +116,23 @@ for iter = 1:numiter_u
 %     
     [newxu, ~] = Believer_nextUpdate(xu, fu, prob.xu_bu, prob.xu_bl, ...
                         num_pop, num_gen, cu, normhn);
-                    
-                    
+                                        
     % [pred_fl, pred_mu] = Predict_GPR(mapping_bl, newxu, map_param, mapping_archive);
     % disp(newxu);
-    
-    
-    
-    dist  = pdist2(newxu, archive.xu);
+
+    dist = pdist2(newxu, archive.xu);
     [~, idx] = sort(dist);
     seed_xl = archive.xl(idx(1), :);
     
     if use_seeding
         [newxl, n, ~, lower_archive]   = llmatch_keepdistance(newxu, llmatch_p, 'visualization', false,'seed_xl', seed_xl, ...
-            'lower_archive', lower_archive, 'seeding_only', true, 'restartn', rx);
-        
+            'lower_archive', lower_archive, 'seeding_only', true, 'restartn', rx);      
     else
-        [newxl, n, ~, lower_archive]   = llmatch_keepdistance(newxu, llmatch_p, 'visualization', false, 'seed_xl', seed_xl, ...
+        [newxl, n, flag, lower_archive]   = llmatch_keepdistance(newxu, llmatch_p, 'visualization', false, 'seed_xl', seed_xl, ...
             'lower_archive', lower_archive, 'archive', archive); %, 'pred_fl',pred_fl, 'pred_mu', pred_mu);
     end
     
+   
     low_neval = low_neval + n;
     % newxl = prob.get_xlprime(newxu);
     
@@ -158,7 +156,7 @@ for iter = 1:numiter_u
     % expand
     xu = [xu; newxu]; xl = [xl; newxl]; fu = [fu; newfu];
     fl = [fl; newfl]; cu = [cu; newcu]; cl = [cl; newcl];
-    
+    % artifical_flag = [artifical_flag; flag]; %test step
     % eliminate close
     if dist_id > 0
         
@@ -166,7 +164,7 @@ for iter = 1:numiter_u
         fprintf('upper total size %d \n',size(xu, 1));
         
         xu(dist_id, :) = []; xl(dist_id, :) = []; fu(dist_id, :) = [];
-        fl(dist_id, :) = []; 
+        fl(dist_id, :) = [];  % artifical_flag(dist_id, :) = [];
         if ~isempty(cu) 
             cu(dist_id, :) = [];
         end
@@ -178,7 +176,8 @@ for iter = 1:numiter_u
    % save 
     archive.xu =  xu; archive.xl =  xl;  archive.fu =  fu;
     archive.fl = fl;  archive.cu =  cu; archive.cl =  cl;
-    
+    % archive.artifical_flag = artifical_flag;
+
     
 end
 %obj.close();
