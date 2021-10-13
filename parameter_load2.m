@@ -7,6 +7,7 @@ coresteps       = false; % true means no upper local search or re-evaluation
 inisize_u         = 20;   % upper level initialization sample size
 inisize_l         = 20;   % lower level initialization sample size
 numiter_l         = 60;   % lower level infill iteration number
+maxFE_l          = 200;
 numiter_u         = 20;   % upper level infill iteration number
 num_pop           = 100;  % EA search on surrogate( KE or EI), population size
 num_gen           = 100;  % EA search on surrogate( KE or EI), generation size
@@ -27,8 +28,9 @@ re_evalparameter.num_gen       =  5;    % post infill process: re-evaluation EA 
 re_evalparameter.num_pop       =  10;     % post infill process: re-evaluation EA population
 
 %------------------------------------
-llmatch_p               = struct();      % llmatch function parameter
+llmatch_p                       = struct();      % llmatch function parameter
 llmatch_p.num_pop       = num_pop;
 llmatch_p.num_gen       = num_gen;
-llmatch_p.egoinitsize   = inisize_l;
-llmatch_p.egoitersize   = numiter_l;
+llmatch_p.egoinitsize     = inisize_l;
+llmatch_p.egoitersize     = numiter_l;
+llmatch_p.maxFE_l         = maxFE_l;
