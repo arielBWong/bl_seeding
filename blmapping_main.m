@@ -44,11 +44,12 @@ normhn = str2func('normalization_z');
 % lower level settings
 llmatch_p.prob                = prob;
 llmatch_p.egostr              = infill_metodstr;
-llmatch_p.egofnormstr         = 'normalization_z';    %  Only for place holder/ original Believer and EGO will need
+llmatch_p.egofnormstr     = 'normalization_z';    %  Only for place holder/ original Believer and EGO will need
 llmatch_p.seed                = seed;
 llmatch_p.localsearch      = localsearch;
 llmatch_p.method           = method;
 llmatch_p.localmethod    = [];
+
 
 % pf = prob.upper_pf(100);
 % plot_MOupper(prob);
@@ -57,7 +58,7 @@ llmatch_p.localmethod    = [];
 xu = lhsdesign(inisize_u, prob.n_uvar, 'criterion', 'maximin', 'iterations', 1000);
 xu = repmat(prob.xu_bl, inisize_u, 1) + repmat((prob.xu_bu - prob.xu_bl), inisize_u, 1) .* xu;
 
-xl	       = [];
+xl	            = [];
 low_neval  = 0;
 
 % for testing lower level correlation
@@ -68,31 +69,30 @@ lower_archive.init_xl = train_xl;
 lower_archive.init_fl = [];
 
 %---xu match its xl and evaluate fu
-% artifical_flag = [];
+artificial_flag = [];
 for i = 1:inisize_u
     fprintf('Initialition xu matching process iteration %d\n', i);
     [xl_single, n, flag, lower_archive]   = llmatch_keepdistance(xu(i, :), llmatch_p, 'visualization', false, 'lower_archive', lower_archive);
-    % artifical_flag     = [artifical_flag; flag];
+    artificial_flag     = [artificial_flag; flag];
      % xl_single         = prob.get_xlprime(xu(i, :));
      % n                 = 0;
-     xl                  = [xl; xl_single];
+     xl                    = [xl; xl_single];
      n_FE                = n_FE + n;
 end
 
 
 %---xu evaluation
 [fu, cu]                 = prob.evaluate_u(xu, xl);
-[fl,  cl]                = prob.evaluate_l(xu, xl);
+[fl,  cl]                  = prob.evaluate_l(xu, xl);
 
 % -- archive all evaluated
 archive.xu     = xu;
-archive.xl     = xl;
+archive.xl      = xl;
 archive.fu     = fu;
-archive.fl     = fl;
-archive.cu     = cu;
+archive.fl      = fl;
+archive.cu    = cu;
 archive.cl     = cl;
-
-% archive.artifical_flag = artifical_flag;
+archive.artificial_flag = artificial_flag;
 
 krg_param.GPR_type = 2;
 krg_param.no_trials = 1;
@@ -109,16 +109,16 @@ map_param.no_trials = 1;
 for iter = 1:numiter_u
     fprintf('xu infill iterate %d \n', iter);
      
-%     mapping_archive.x   = archive.xu;
-%     mapping_archive.muf = archive.fl;
-%     mapping_archive.mug = archive.cl;
-%     mapping_bl = Train_GPR(archive.xu , archive.fl, map_param);
-%     
+    mapping_archive.x   = archive.xu;
+    mapping_archive.muf = archive.fl;
+    mapping_archive.mug = archive.cl;
+    mapping_bl = Train_GPR(archive.xu , archive.fl, map_param);
+    
     [newxu, ~] = Believer_nextUpdate(xu, fu, prob.xu_bu, prob.xu_bl, ...
                         num_pop, num_gen, cu, normhn);
                                         
-    % [pred_fl, pred_mu] = Predict_GPR(mapping_bl, newxu, map_param, mapping_archive);
-    % disp(newxu);
+    [pred_fl, pred_mu] = Predict_GPR(mapping_bl, newxu, map_param, mapping_archive);
+
 
     dist = pdist2(newxu, archive.xu);
     [~, idx] = sort(dist);
@@ -129,9 +129,8 @@ for iter = 1:numiter_u
             'lower_archive', lower_archive, 'seeding_only', true, 'restartn', rx);      
     else
         [newxl, n, flag, lower_archive]   = llmatch_keepdistance(newxu, llmatch_p, 'visualization', false, 'seed_xl', seed_xl, ...
-            'lower_archive', lower_archive, 'archive', archive); %, 'pred_fl',pred_fl, 'pred_mu', pred_mu);
-    end
-    
+            'lower_archive', lower_archive, 'archive', archive, 'pred_fl',pred_fl, 'pred_mu', pred_mu);
+    end   
    
     low_neval = low_neval + n;
     % newxl = prob.get_xlprime(newxu);
@@ -156,7 +155,8 @@ for iter = 1:numiter_u
     % expand
     xu = [xu; newxu]; xl = [xl; newxl]; fu = [fu; newfu];
     fl = [fl; newfl]; cu = [cu; newcu]; cl = [cl; newcl];
-    % artifical_flag = [artifical_flag; flag]; %test step
+    artificial_flag = [artificial_flag; flag];  %test step
+    
     % eliminate close
     if dist_id > 0
         
@@ -176,7 +176,7 @@ for iter = 1:numiter_u
    % save 
     archive.xu =  xu; archive.xl =  xl;  archive.fu =  fu;
     archive.fl = fl;  archive.cu =  cu; archive.cl =  cl;
-    % archive.artifical_flag = artifical_flag;
+    archive.artificial_flag = artificial_flag;
 
     
 end

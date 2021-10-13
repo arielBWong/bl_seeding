@@ -28,8 +28,13 @@ problems = {'smd5mp(1, 1, 1)' , 'smd7mp(1, 1, 1)',  'smd8mp(1, 1, 1)', ...
     'smd1mp(1, 1 , 1)' , 'smd2mp(1, 1, 1)',  'smd3mp(1, 1, 1)', ...
     'smd4mp(1, 1, 1)', 'smd6mp(1, 0, 1, 1)', };
 
+<<<<<<< HEAD
 
 blmapping_main('smd7mp(1, 1, 1)',  15,  false,...
+=======
+% 
+blmapping_main('smd2mp(1, 1, 1)',  1,  false,...
+>>>>>>> 6a23a1628d31eec91f821a78e63ffc76ee83d50a
                            'local_str', 'vanilla', 'use_seeding', false, 'restart_num', 1);
 
 
