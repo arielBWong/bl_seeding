@@ -30,7 +30,7 @@ if visualize
 end
 
 rng(seed, 'twister');
-eval('parameter_load2');                                       % IMPORTANT,  variables are load externally
+eval('parameter_load');                                       % IMPORTANT,  variables are load externally
 infill_metodstr = 'Believer_nextUpdate';
 n_FE = 0;                                                             % record lowerlevel FEs
 prob = eval(prob);
@@ -44,9 +44,9 @@ normhn = str2func('normalization_z');
 % lower level settings
 llmatch_p.prob                = prob;
 llmatch_p.egostr              = infill_metodstr;
-llmatch_p.egofnormstr     = 'normalization_z';    %  Only for place holder/ original Believer and EGO will need
+llmatch_p.egofnormstr         = 'normalization_z';    %  Only for place holder/ original Believer and EGO will need
 llmatch_p.seed                = seed;
-llmatch_p.localsearch      = localsearch;
+llmatch_p.localsearch        = localsearch;
 llmatch_p.method           = method;
 llmatch_p.localmethod    = [];
 
@@ -59,7 +59,7 @@ xu = lhsdesign(inisize_u, prob.n_uvar, 'criterion', 'maximin', 'iterations', 100
 xu = repmat(prob.xu_bl, inisize_u, 1) + repmat((prob.xu_bu - prob.xu_bl), inisize_u, 1) .* xu;
 
 xl	            = [];
-low_neval  = 0;
+low_neval       = 0;
 
 % for testing lower level correlation
 train_xl        = lhsdesign(inisize_l, prob.n_lvar, 'criterion','maximin','iterations',1000);
@@ -74,8 +74,8 @@ for i = 1:inisize_u
     fprintf('Initialition xu matching process iteration %d\n', i);
     [xl_single, n, flag, lower_archive]   = llmatch_keepdistance(xu(i, :), llmatch_p, 'visualization', false, 'lower_archive', lower_archive);
     artificial_flag     = [artificial_flag; flag];
-     % xl_single         = prob.get_xlprime(xu(i, :));
-     % n                 = 0;
+    % xl_single         = prob.get_xlprime(xu(i, :));
+    % n                 = 0;
      xl                    = [xl; xl_single];
      n_FE                = n_FE + n;
 end
@@ -104,6 +104,12 @@ param_ea.gen       = num_gen;
 map_param.GPR_type = 2;
 map_param.no_trials = 1;
 
+
+global distance_checkN
+distance_checkN = [];
+
+global distance_check
+distance_check=[];
 
 % plot P1
 for iter = 1:numiter_u
@@ -317,6 +323,16 @@ filename = strcat('upperAccuracy_seed_', num2str(seed), '.csv');
 savename = fullfile(resultfolder, filename);
 csvwrite(savename, fl);
 
+global distance_checkN
+global distance_check;
+
+filename = strcat('distanceCheckN_seed_', num2str(seed), '.csv');
+savename = fullfile(resultfolder, filename);
+csvwrite(savename, distance_checkN);
+
+filename = strcat('distanceCheck_seed_', num2str(seed), '.csv');
+savename = fullfile(resultfolder, filename);
+csvwrite(savename, distance_check);
 
 end
 

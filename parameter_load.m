@@ -10,6 +10,7 @@ numiter_l         = 70;   % lower level infill iteration number
 numiter_u         = 20;   % upper level infill iteration number
 num_pop           = 100;  % EA search on surrogate( KE or EI), population size
 num_gen           = 100;  % EA search on surrogate( KE or EI), generation size
+maxFE_l           = 200;
 %---------------------------
 % bilevel local search parameter
 blsearch                     =  false; % post infill process: whether conduct bilevel local search on upper level
@@ -32,3 +33,4 @@ llmatch_p.num_pop       = num_pop;
 llmatch_p.num_gen       = num_gen;
 llmatch_p.egoinitsize   = inisize_l;
 llmatch_p.egoitersize   = numiter_l;
+llmatch_p.maxFE_l      = maxFE_l;
