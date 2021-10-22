@@ -13,11 +13,12 @@ addRequired(p, 'prob');
 addRequired(p, 'init_size');
 addRequired(p, 'xl_probe');
 addParameter(p, 'visualization', false);
-addParameter(p, 'lower_archive', []);                   %  probing archive
-addParameter(p, 'seeding_only', false);               %  conduct seeding controller
-addParameter(p, 'restartn', 0);                             %  additional restart times
-addParameter(p, 'archive', []);                             %   upper level all evaluated xu
-addParameter(p, 'lower_xl', []);                             %  lower level matching xl, might larger than xu due to asynsic update
+addParameter(p, 'lower_archive', []);                           % probing archive
+addParameter(p, 'seeding_only', false);                         % conduct seeding controller
+addParameter(p, 'restartn', 0);                                 % additional restart times
+addParameter(p, 'archive', []);                                 % upper level all evaluated xu
+addParameter(p, 'lower_xl', []);                                % lower level matching xl, might larger than xu due to asynsic update
+addParameter(p, 'decision_making', true);                       % if this variable is set to false, means lower level is global search 
 parse(p, upper_xu, prob, init_size, xl_probe, varargin{:});
 % -----------------------------------
 
@@ -31,9 +32,11 @@ init_size = p.Results.init_size;
 xl_probe = p.Results.xl_probe;
 prob = p.Results.prob;
 lower_xl = p.Results.lower_xl;
+decision_making = p.Results.decision_making;
 %------------------------------------------------
 
 global lower_eval
+global lowerlocal_record
 l_nvar           = prob.n_lvar;
 upper_bound      = prob.xl_bu;
 lower_bound      = prob.xl_bl;
@@ -47,17 +50,17 @@ funh_con = @(x)constraint_func(prob, xu, x);
 
 
 %-- lower level initialization
-% if ~isempty(lower_archive)                                 % for lower level archive
+% if ~isempty(lower_archive)                                    % for lower level archive
 train_xl = xl_probe;
 
 % include seeding xl
-if ~isempty(archive)  && seeding_only  % first generation on the upper level use global search                                 
+if ~isempty(archive)  && seeding_only                           % first generation on the upper level use global search                                 
     
     if rn>0
         maxFE = 500; else
         maxFE = 1000;
     end
-    dist  = pdist2(xu , archive);                              % this xu is upper level new infill xu, not added into archive
+    dist = pdist2(xu , archive);                               % this xu is upper level new infill xu, not added into archive
     [~, idx] = sort(dist);
     seed_xl =  lower_xl(idx(1), :);
     
@@ -78,6 +81,7 @@ if ~isempty(archive)  && seeding_only  % first generation on the upper level use
         additional_searchxl = [];
         additional_searchfl = [];
         additional_searchcl = [];
+        
         for i = 1:rn           
             opts.Display = 'off';
             opts.MaxFunctionEvaluations = maxFE;
@@ -97,8 +101,21 @@ if ~isempty(archive)  && seeding_only  % first generation on the upper level use
         additional_searchfl  = [additional_searchfl; match_fl];
         additional_searchcl  = [additional_searchcl; match_cl];
         
-        [match_xl, ~ , ~, ~] =  localsolver_startselection(additional_searchxl, additional_searchfl, additional_searchcl);
-    end  
+        [match_xl, match_fl , ~, ~] =  localsolver_startselection(additional_searchxl, additional_searchfl, additional_searchcl);
+    end 
+    
+    % the above is local search invoked, so record number of local search
+    % invoked for each xu
+    % and success or not
+    
+    ideal_xl = prob.get_xlprime(xu);
+    [ideal_fl, ~] = prob.evaluate_l(xu, ideal_xl);
+    if abs(ideal_fl - match_fl) > 1 
+        lowerlocal_record = [lowerlocal_record;0]; % local search fail
+    else
+        lowerlocal_record = [lowerlocal_record;1]; % local search success
+    end
+    
     return
     
 end
@@ -110,44 +127,45 @@ end
 lower_eval = lower_eval + size(train_fl, 1);
 
 % decide whether skip infill steps
-if false
-% if ~isempty(lower_archive) && ~isempty(archive)  % when archive is passed in, means can do closeness check
-    dist  = pdist2(xu , archive);                              % this xu is upper level new infill xu, not added into archive
-    [~, idx] = sort(dist);
-    r = corr(train_fl, lower_archive(idx(1), :)');
-    
-    seed_xu = archive(idx(1), :);
-    
-    if r>0.97 % skip infill
-        maxFE = 950;
-        seed_xl = lower_xl(idx(1), :);
-        [seed_fl, seed_fc] = prob.evaluate_l(xu, seed_xl);
+if decision_making % if decision_making is set false, means that 
+    if ~isempty(lower_archive) && ~isempty(archive)                 % when archive is passed in, means can do closeness check
+        dist  = pdist2(xu, archive);                                % this xu is upper level new infill xu, not added into archive
+        [~, idx] = sort(dist);
+        r = corr(train_fl, lower_archive(idx(1), :)');
         
-        % opts.Display = 'iter';
-        % opts.Algorithm = 'sqp';
-        opts.Display = 'off';
-        opts.MaxFunctionEvaluations = maxFE;
-        opts.SpecifyObjectiveGradient = true;
-        [match_xl, ~, ~, output] = fmincon(funh_obj, seed_xl, [], [],[], [],  ...
-            prob.xl_bl, prob.xl_bu, funh_con,opts);        
-        lower_eval = lower_eval + output.funcCount;
-
-        [match_fl, match_cl]          = prob.evaluate_l(xu, match_xl);  % additional lazy step, can be extracted from local search results
-        additional_searchxl           = [seed_xl; match_xl]; % variable name from copy paste
-        additional_searchfl           = [seed_fl; match_fl];
-        additional_searchcl           = [seed_fc; match_cl];
+        seed_xu = archive(idx(1), :);
         
-        [match_xl, ~ , flag, ~] =  localsolver_startselection(additional_searchxl, additional_searchfl, additional_searchcl);
-       %  n_fev = n_fev + size(train_xl, 1);
-       
-       
-%         prime_xl = prob.get_xlprime(xu);
-%         d = sqrt(sum((prime_xl - match_xl).^2))
-%         if r< 0.96
-%         % if d > 1e-3 % plot seed and returned x
-%             plot2dlower( xu, prob.xl_bl, prob.xl_bu, match_xl, seed_xl, prob, seed_xu)
-%         end
-        return
+        if r>0.95 % skip infill
+            maxFE = 950;
+            seed_xl = lower_xl(idx(1), :);
+            [seed_fl, seed_fc] = prob.evaluate_l(xu, seed_xl);
+            
+            % opts.Display = 'iter';
+            % opts.Algorithm = 'sqp';
+            opts.Display = 'off';
+            opts.MaxFunctionEvaluations = maxFE;
+            opts. SpecifyObjectiveGradient = true;
+            [match_xl, ~, ~, output] = fmincon(funh_obj, seed_xl, [], [],[], [],  ...
+                prob.xl_bl, prob.xl_bu, funh_con,opts);
+            lower_eval = lower_eval + output.funcCount;
+            
+            [match_fl, match_cl]          = prob.evaluate_l(xu, match_xl);  % additional lazy step, can be extracted from local search results
+            additional_searchxl           = [seed_xl; match_xl]; % variable name from copy paste
+            additional_searchfl           = [seed_fl; match_fl];
+            additional_searchcl           = [seed_fc; match_cl];
+            
+            [match_xl, match_fl, ~, flag, ~] =  localsolver_startselection(additional_searchxl, additional_searchfl, additional_searchcl);
+            
+            ideal_xl = prob.get_xlprime(xu);
+            [ideal_fl, ~] = prob.evaluate_l(xu, ideal_xl);
+            if abs(ideal_fl - match_fl) > 1
+                lowerlocal_record = [lowerlocal_record; 0]; % local search fail
+            else
+                lowerlocal_record = [lowerlocal_record; 1]; % local search success
+            end
+            
+            return
+        end
     end
 end
 
@@ -157,57 +175,23 @@ end
 
 
 % insert global search
-param.gen = 19;
-param.popsize =  50;
+% run to here means transfer fails or first generation
+
+param.gen = 19; % design problem of gsolver, it should be 20
+param.popsize = 50;
 lb = prob.xl_bl;
 ub = prob.xl_bu;
 num_xvar = prob.n_lvar;
 initmatrix = train_xl;
 
-[best_x, best_f, best_c, ~] = gsolver(funh_obj, num_xvar, lb, ub, initmatrix, funh_con, param, 'visualize', true);
+[best_x, best_f, best_c, a ,~] = gsolver(funh_obj, num_xvar, lb, ub, initmatrix, funh_con, param, 'visualize', false);
 s = 1;
 
-lower_eval = lower_eval +  param.gen * param.popsize;
+lower_eval = lower_eval +  (param.gen + 1) * param.popsize - size(train_xl, 1); % because before similarity, there is an adding evaluation step
 
-if ~isempty(archive) % first generation there is no landscape compare
-    lower_eval = lower_eval - size(train_fl, 1);
-end
 
-nolocalsearch = false;
-if nolocalsearch
-    match_xl = best_x;
-    n_fev      = size(arc_xl, 1);
-    flag        = s;
-else
-    if size(train_fl, 2)> 1
-        error('local search does not apply to MO');
-    end
-    maxFE = 50;
-    % local search on true evaluation
-  
-    opts.Display = 'off';
-    opts.MaxFunctionEvaluations = maxFE;
-    
-    [match_xl, ~, ~, output] = fmincon(funh_obj, best_x, [], [],[], [],  ...
-        prob.xl_bl, prob.xl_bu, funh_con,opts);
-    lower_eval = lower_eval + output.funcCount;
-    % n_global                   = size(train_xl, 1);
-    %  n_fev                     = n_global +num_eval;       % one in a population is evaluated
-    
-    % --- avoid sqp overshooting problem
-    [match_fl, match_cl]         = prob.evaluate_l(xu, match_xl); % lazy step, no FE should be counted here
-    additional_searchxl          = [best_x; match_xl]; % variable name from copy paste
-    additional_searchfl          = [best_f;  match_fl];
-    additional_searchcl          = [best_c; match_cl];
-    
-    [match_xl, ~ , flag, ~] =  localsolver_startselection(additional_searchxl, additional_searchfl, additional_searchcl);
-    
+match_xl = best_x;
 
-%     xl_prime = prob.get_xlprime(xu);
-%     if sqrt(sum((xl_prime - match_xl).^2)) > 1e-2
-%         plot2dlower( xu, lb, ub, match_xl, [], prob)
-%     end
-    end
 end
 
 

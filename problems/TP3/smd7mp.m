@@ -23,7 +23,7 @@ classdef smd7mp
                 obj.q = q;
                 obj.r = r;
             end
-            obj.name = 'SMD7_mp';
+            obj.name = 'SMD7mp';
             
             % level variables
             obj.n_lvar = obj.q + obj.r;

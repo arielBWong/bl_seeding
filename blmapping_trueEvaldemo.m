@@ -6,6 +6,7 @@ function blmapping_trueEvaldemo(problem_str, seed, varargin)
 p = inputParser;
 addRequired(p,  'problem_str');
 addRequired(p,  'seed');
+addParameter(p, 'decision_making', true);
 addParameter(p, 'restart_num', 0);
 addParameter(p, 'use_seeding', false);
 parse(p, problem_str, seed, varargin{:});
@@ -14,7 +15,8 @@ parse(p, problem_str, seed, varargin{:});
 prob_str = p.Results.problem_str;
 seed = p.Results.seed;
 use_seeding = p.Results.use_seeding;
-rx = p.Results.restart_num;
+rn = p.Results.restart_num;
+decision_making = p.Results.decision_making;
 %---
 
 visualize = false;
@@ -29,6 +31,7 @@ rng(seed, 'twister');
 global prob
 prob = eval(prob_str);
 
+
 %------------------Process starts--------------------
 % insert global search
 inisize_l       = 20;
@@ -39,10 +42,10 @@ xl_probe        = repmat(prob.xl_bl, inisize_l, 1) ...
 funh_external = @(pop)up_probrecord(pop,  xl_probe, prob);
 
 
-funh_obj  =  @(x)up_objective_func(prob, x, xl_probe, use_seeding);
+funh_obj  =  @(x)up_objective_func(prob, x, xl_probe, use_seeding, rn, decision_making);
 funh_con  =  @(x)up_constraint_func(prob, x);
 
-param.gen = 10;
+param.gen = 9; 
 param.popsize = 50;
 lb = prob.xu_bl;
 ub = prob.xu_bu;
@@ -53,21 +56,23 @@ global upper_xu
 global xu_probefl
 global lower_xl;
 global lower_eval;
+global lowerlocal_record
 upper_xu = [];
 lower_xl = [];
 xu_probefl = [];
 lower_eval = 0;
+lowerlocal_record = [];
 
 % obj = VideoWriter('moving.avi');
 % obj.Quality= 100;
 % obj.FrameRate = 25;
 % open(obj);
 
-[best_x, ~, ~, ~] = gsolver(funh_obj, num_xvar, lb, ub, initmatrix, funh_con, param,  'externalfunction', funh_external,  'visualize', false);
+[best_x, ~, ~, a, ~] = gsolver(funh_obj, num_xvar, lb, ub, initmatrix, funh_con, param,  'externalfunction', funh_external,  'visualize', false);
 
 
-%obj.close();
-save_results(upper_xu, lower_xl, prob,  seed, use_seeding, rx, lower_eval);
+% obj.close();
+save_results(upper_xu, lower_xl, prob,  seed, use_seeding, rn, lower_eval, lowerlocal_record, decision_making);
 end
 
 function out = up_probrecord(pop, xl_probe, prob)
@@ -77,6 +82,7 @@ function out = up_probrecord(pop, xl_probe, prob)
 global xu_probefl
 global upper_xu
 global lower_xl
+
 
 upper_xu = [upper_xu; pop.X];
 lower_xl = [lower_xl; pop.A];
@@ -91,7 +97,7 @@ out= [];
 end
 
 
-function [output] =  up_objective_func(prob, xu, xl_probe, use_seeding)
+function [output] =  up_objective_func(prob, xu, xl_probe, use_seeding, rn, decision_making)
 global xu_probefl
 global upper_xu
 global lower_xl
@@ -109,7 +115,7 @@ for i = 1:m
   
     [match_xl] =  llmatch_trueEvaluation(xui, prob,  20, xl_probe, ...
         'lower_archive', xu_probefl, 'archive', upper_xu, 'lower_xl', lower_xl,...
-        'seeding_only', use_seeding);
+        'seeding_only', use_seeding, 'restartn', rn, 'decision_making', decision_making);
     fi = prob.evaluate_u(xui, match_xl);
     xl = [xl; match_xl];
     f = [f; fi];
@@ -123,13 +129,13 @@ function c = up_constraint_func(prob, xu)
 c = [];
 end
 
-function  save_results(xu, xl, prob, seed, use_seeding, rx, lower_eval)
+function  save_results(xu, xl, prob, seed, use_seeding, rx, lower_eval, lowerlocal_record, decision_making)
 
 [fu, cu] = prob.evaluate_u(xu, xl); % lazy  step
 [fl, cl] = prob.evaluate_l(xu, xl);
 
-
-resultfolder = fullfile(pwd, 'resultfolder_trueEval' );
+name = strcat('resultfolder_trueEval', num2str(prob.n_lvar));
+resultfolder = fullfile(pwd, name );
 n = exist(resultfolder);
 if n ~= 7
     mkdir(resultfolder)
@@ -139,9 +145,13 @@ if use_seeding
     foldername = strcat(prob.name, '_seeding');
     foldername = strcat(prob.name, num2str(rx));
 else
-    % foldername = strcat(prob.name, '_global2');
-    foldername = prob.name;
+    if decision_making
+        foldername = prob.name;
+    else
+        foldername = strcat(prob.name, '_baseline');
+    end
 end
+
 resultfolder = fullfile(resultfolder, foldername);
 n = exist(resultfolder);
 if n ~= 7
@@ -176,6 +186,9 @@ filename = strcat('lowerlevelcount_seed_', num2str(seed), '.csv');
 savename = fullfile(resultfolder, filename);
 csvwrite(savename, lower_eval);
 
+filename = strcat('lower_success_seed_', num2str(seed), '.csv');
+savename = fullfile(resultfolder, filename);
+csvwrite(savename, lowerlocal_record);
 
 
 if size(fu, 2) > 1

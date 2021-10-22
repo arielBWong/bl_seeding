@@ -33,7 +33,16 @@ mp_centers = {xl_center, forward, backward, left, right};
 
 fmp = [];
 for j = 1:length(mp_centers)
-    fj = h(j) ./ (1 + w(j)  .* sum(((xl - mp_centers{j}) .*  delta).^2,  2));
+    try
+        fj = h(j) ./ (1 + w(j)  .* sum(((xl - mp_centers{j}) .*  delta).^2,  2));
+    catch ME
+        disp(h(j));
+        disp(w(j));
+        disp(xl);
+        disp(mp_centers{j});
+        disp(delta);
+        error('what is going wrong?');
+    end
     fmp = [fmp, fj];
 end
 fmp = max(fmp, [], 2);
