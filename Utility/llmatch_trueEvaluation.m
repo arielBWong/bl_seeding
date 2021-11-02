@@ -1,4 +1,4 @@
-function[match_xl] = llmatch_trueEvaluation(upper_xu, prob, init_size, xl_probe, varargin)
+function[match_xl, mdl] = llmatch_trueEvaluation(upper_xu, prob, init_size, xl_probe, varargin)
 % method of searching for a match xl for xu.
 % Problem(Prob) definition require certain formation for bilevel problems
 % evaluation method should be of  form 'evaluation_l(xu, xl)'
@@ -37,15 +37,20 @@ decision_making = p.Results.decision_making;
 
 global lower_eval
 global lowerlocal_record
+global lower_mdl
+
 l_nvar           = prob.n_lvar;
 upper_bound      = prob.xl_bu;
 lower_bound      = prob.xl_bl;
 xu_init          = repmat(xu, init_size, 1);
 
 %-------------------------------------------------
-opts = optimset('fmincon');
+
+
+mdl = 'position_holder';
+
+
 funh_obj = @(x)objective_func(prob, xu, x);
-% funh_obj = @(x)objective_func_extended(prob, xu, x);
 funh_con = @(x)constraint_func(prob, xu, x);
 
 
@@ -64,13 +69,20 @@ if ~isempty(archive)  && seeding_only                           % first generati
     [~, idx] = sort(dist);
     seed_xl =  lower_xl(idx(1), :);
     
-    opts.Display = 'off';
-    opts.MaxFunctionEvaluations = maxFE;
-    [match_xl, ~, ~, output] = fmincon(funh_obj, seed_xl, [], [],[], [],  ...
-        prob.xl_bl, prob.xl_bu, funh_con,opts);
+    % opts.Display = 'off';
+    % opts.MaxFunctionEvaluations = maxFE;
+    % [match_xl, ~, ~, output] = fmincon(funh_obj, seed_xl, [], [],[], [],  ...
+    %     prob.xl_bl, prob.xl_bu, funh_con,opts);
+    
+    [match_xl,~, history, output] = lowerlevel_fmincon(seed_xl, maxFE, prob.xl_bl, prob.xl_bu, funh_obj, funh_con);
     
     lower_eval = lower_eval + output.funcCount;
     [match_fl, match_cl] = prob.evaluate_l(xu, match_xl); % additional lazy step, can be extracted from local search results
+    
+    % Collect solutions from all evaluated solutions
+    % local search might not have as many as counted
+    aftersearch_collectx = history.x;
+    aftersearch_collectf = history.fval;
     
     % random restart other local seasrch points
     if rn>0 % number of restart
@@ -83,10 +95,12 @@ if ~isempty(archive)  && seeding_only                           % first generati
         additional_searchcl = [];
         
         for i = 1:rn           
-            opts.Display = 'off';
-            opts.MaxFunctionEvaluations = maxFE;
-            [match_xlrestart, ~, ~, output] = fmincon(funh_obj, restart_xl, [], [],[], [],  ...
-                prob.xl_bl, prob.xl_bu, funh_con,opts);
+            % opts.Display = 'off';
+            % opts.MaxFunctionEvaluations = maxFE;  
+            % [match_xlrestart, ~, ~, output] = fmincon(funh_obj, restart_xl, [], [],[], [],  ...
+            %    prob.xl_bl, prob.xl_bu, funh_con,opts);
+            
+            [match_xlrestart,~,history, output] = lowerlevel_fmincon(restart_xl, maxFE, prob.xl_bl, prob.xl_bu,funh_obj, funh_con);
             
             lower_eval = lower_eval + output.funcCount;
             
@@ -94,6 +108,10 @@ if ~isempty(archive)  && seeding_only                           % first generati
             additional_searchxl = [additional_searchxl; match_xlrestart];
             additional_searchfl = [additional_searchfl; match_flrestart];
             additional_searchcl = [additional_searchcl; match_clrestart];
+            
+            
+            aftersearch_collectx = [aftersearch_collectx; history.x];
+            aftersearch_collectf = [aftersearch_collectf; history.fval];
         end
         
         % select with previous search results with seeding
@@ -127,7 +145,9 @@ end
 lower_eval = lower_eval + size(train_fl, 1);
 
 % decide whether skip infill steps
-if decision_making % if decision_making is set false, means that 
+correlation_decision = false;
+correctionFunc_decision = true;
+if decision_making                                                  % if decision_making is set false, means that global search
     if ~isempty(lower_archive) && ~isempty(archive)                 % when archive is passed in, means can do closeness check
         dist  = pdist2(xu, archive);                                % this xu is upper level new infill xu, not added into archive
         [~, idx] = sort(dist);
@@ -135,18 +155,26 @@ if decision_making % if decision_making is set false, means that
         
         seed_xu = archive(idx(1), :);
         
-        if r>0.95 % skip infill
+        if r > 0.95 % skip infill
             maxFE = 950;
-            seed_xl = lower_xl(idx(1), :);
-            [seed_fl, seed_fc] = prob.evaluate_l(xu, seed_xl);
+            if correlation_decision
+                seed_xl = lower_xl(idx(1), :);              
+            end
             
-            % opts.Display = 'iter';
-            % opts.Algorithm = 'sqp';
-            opts.Display = 'off';
-            opts.MaxFunctionEvaluations = maxFE;
-            opts. SpecifyObjectiveGradient = true;
-            [match_xl, ~, ~, output] = fmincon(funh_obj, seed_xl, [], [],[], [],  ...
-                prob.xl_bl, prob.xl_bu, funh_con,opts);
+            if correctionFunc_decision
+                % Predict global optimal using landscape surrogate +
+                % delta_D
+         
+                mdl_close = lower_mdl{idx(1)};         
+                seed_xl = correctionFunc_decisionmaking(train_xl, train_fl,lower_archive(idx(1), :)', mdl_close, prob);
+      
+                
+                
+            end
+            
+            [seed_fl, seed_fc] = prob.evaluate_l(xu, seed_xl);
+            [match_xl, ~, history, output] = lowerlevel_fmincon(seed_xl, maxFE, prob.xl_bl, prob.xl_bu,funh_obj, funh_con);
+            
             lower_eval = lower_eval + output.funcCount;
             
             [match_fl, match_cl]          = prob.evaluate_l(xu, match_xl);  % additional lazy step, can be extracted from local search results
@@ -164,10 +192,20 @@ if decision_making % if decision_making is set false, means that
                 lowerlocal_record = [lowerlocal_record; 1]; % local search success
             end
             
+            % Collect solutions from all evaluated solutions
+            % local search might not have as many as counted
+            aftersearch_collectx = history.x;
+            aftersearch_collectf = history.fval;
+            
+            aftersearch_collectx = [aftersearch_collectx; train_xl];
+            aftersearch_collectf = [aftersearch_collectf; train_fl];
+            mdl = lower_surrogateCreate(aftersearch_collectx, aftersearch_collectf, prob.xl_bl, prob.xl_bu);
+            
             return
         end
     end
 end
+
 
 if visualization
     fighn            = figure(1);
@@ -184,13 +222,17 @@ ub = prob.xl_bu;
 num_xvar = prob.n_lvar;
 initmatrix = train_xl;
 
-[best_x, best_f, best_c, a ,~] = gsolver(funh_obj, num_xvar, lb, ub, initmatrix, funh_con, param, 'visualize', false);
+[best_x, best_f, best_c, archive ,~] = gsolver(funh_obj, num_xvar, lb, ub, initmatrix, funh_con, param, 'visualize', false);
 s = 1;
 
-lower_eval = lower_eval +  (param.gen + 1) * param.popsize - size(train_xl, 1); % because before similarity, there is an adding evaluation step
-
+lower_eval = lower_eval + (param.gen + 1) * param.popsize - size(train_xl, 1); % because before similarity, there is an adding evaluation step
 
 match_xl = best_x;
+if decision_making  % only when starting point selection is based on decision making, landscape surrogate needs to be trained and saved
+    aftersearch_collectx = archive.sols(:, 2: prob.n_lvar + 1);
+    aftersearch_collectf = archive.sols(:, prob.n_lvar + 2: end);  % only considers one objective
+    mdl = lower_surrogateCreate(aftersearch_collectx, aftersearch_collectf, prob.xl_bl, prob.xl_bu);
+end
 
 end
 
@@ -283,7 +325,7 @@ gradient = prob.lower_gradient(xu, xl);
 end
 
 
-function plot2dlower( xu, lb, ub, match_xl, seed_xl, prob, seed_xu)
+function plot2dlower(xu, lb, ub, match_xl, seed_xl, prob, seed_xu)
 
 fignh = figure(3);
 nt                  = 100;

@@ -20,9 +20,11 @@ output = funh_obj(child.X);
 if isstruct(output)
     child.F = output.f;
     child.A = output.addon;
+    child.Mdl = output.mdl;
 else
     child.F = output;
     child.A = [];
+    child.Mdl = {};
 end
 
 
@@ -32,15 +34,17 @@ numcon = size(child.C, 2);
 archive.sols=[archive.sols;[repmat(gen,param.popsize,1), child.X, child.F, child.C, child.A]];
 
 % Appending X F C to pop
-pop.X=[pop.X;child.X];
-pop.F=[pop.F;child.F];
+pop.X = [pop.X; child.X];
+pop.F = [pop.F; child.F];
 pop.C = [pop.C; child.C];
 pop.A = [pop.A; child.A];
+pop.Mdl = [pop.Mdl, child.Mdl]; % deliminator is ,
 
-[pop.F, pop.X, pop.C, pop.A] = pop_sort(pop.F, pop.X, pop.C, pop.A);
+[pop.F, pop.X, pop.C, pop.A, pop.Mdl] = pop_sort(pop.F, pop.X, pop.C, pop.A, pop.Mdl);
 
 % dealing with feasibility on lower level
 if ~isempty(varargin)
+    fprintf('in evaluate_order, customized, but test needed\n');
     prob = varargin{1};
     xu_g =  varargin{2};
     xl_g = varargin{3};

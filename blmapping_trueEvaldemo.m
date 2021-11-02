@@ -54,14 +54,17 @@ initmatrix = [];
 
 global upper_xu
 global xu_probefl
-global lower_xl;
-global lower_eval;
+global lower_xl
+global lower_eval
 global lowerlocal_record
+global lower_mdl
+
 upper_xu = [];
 lower_xl = [];
 xu_probefl = [];
 lower_eval = 0;
 lowerlocal_record = [];
+lower_mdl = {};
 
 % obj = VideoWriter('moving.avi');
 % obj.Quality= 100;
@@ -82,18 +85,21 @@ function out = up_probrecord(pop, xl_probe, prob)
 global xu_probefl
 global upper_xu
 global lower_xl
+global lower_mdl
 
 
 upper_xu = [upper_xu; pop.X];
 lower_xl = [lower_xl; pop.A];
+lower_mdl = [lower_mdl, pop.Mdl];
+
 n = size(xl_probe, 1);
 m = size(pop.X, 1);
 for i =1:m
     xui = repmat(pop.X(i, :), n, 1);
     fl_probe = prob.evaluate_l(xui, xl_probe);
-    xu_probefl = [xu_probefl; fl_probe'];
+    xu_probefl = [xu_probefl; fl_probe'];   % this is only used for decision making scheme
 end
-out= [];
+out = [];
 end
 
 
@@ -101,6 +107,7 @@ function [output] =  up_objective_func(prob, xu, xl_probe, use_seeding, rn, deci
 global xu_probefl
 global upper_xu
 global lower_xl
+
 
 % upper xu and lower level does not change at the same time, 
 % upper_xu changes in generation wise, lower_xl changes in each xu's
@@ -110,19 +117,23 @@ global lower_xl
 m = size(xu, 1);
 f = [];
 xl = [];
+mdls = {};
+
 for i = 1:m
     xui = xu(i, :);
   
-    [match_xl] =  llmatch_trueEvaluation(xui, prob,  20, xl_probe, ...
+    [match_xl, mdl] =  llmatch_trueEvaluation(xui, prob,  20, xl_probe, ...
         'lower_archive', xu_probefl, 'archive', upper_xu, 'lower_xl', lower_xl,...
         'seeding_only', use_seeding, 'restartn', rn, 'decision_making', decision_making);
     fi = prob.evaluate_u(xui, match_xl);
     xl = [xl; match_xl];
-    f = [f; fi];
+    f  = [f; fi];
+    mdls{end+1} = mdl;
 end
+
 output.f = f;
 output.addon = xl; 
-
+output.mdl = mdls;
 end
 
 function c = up_constraint_func(prob, xu)
@@ -146,7 +157,7 @@ if use_seeding
     foldername = strcat(prob.name, num2str(rx));
 else
     if decision_making
-        foldername = prob.name;
+        foldername = strcat(prob.name, '_correctionsur');
     else
         foldername = strcat(prob.name, '_baseline');
     end
