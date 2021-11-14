@@ -1,7 +1,6 @@
 function blmapping_trueEvaldemo(problem_str, seed, varargin)
 %  This function apply kriging to bl search and bl mapping
 %
-
 % parse input
 p = inputParser;
 addRequired(p,  'problem_str');
@@ -9,6 +8,7 @@ addRequired(p,  'seed');
 addParameter(p, 'decision_making', true);
 addParameter(p, 'restart_num', 0);
 addParameter(p, 'use_seeding', false);
+addParameter(p, 'seeding_strategy', 1);
 parse(p, problem_str, seed, varargin{:});
 
 %--- assign input parameters
@@ -17,6 +17,7 @@ seed = p.Results.seed;
 use_seeding = p.Results.use_seeding;
 rn = p.Results.restart_num;
 decision_making = p.Results.decision_making;
+seeding_strategy = p.Results.seeding_strategy;
 %---
 
 visualize = false;
@@ -42,10 +43,11 @@ xl_probe        = repmat(prob.xl_bl, inisize_l, 1) ...
 funh_external = @(pop)up_probrecord(pop,  xl_probe, prob);
 
 
-funh_obj  =  @(x)up_objective_func(prob, x, xl_probe, use_seeding, rn, decision_making);
+funh_obj  =  @(x)up_objective_func(prob, x, xl_probe, use_seeding, rn, decision_making, seed, seeding_strategy);
 funh_con  =  @(x)up_constraint_func(prob, x);
 
-param.gen = 9; 
+param.gen = 9;
+%param.gen = 1;
 param.popsize = 50;
 lb = prob.xu_bl;
 ub = prob.xu_bu;
@@ -57,14 +59,22 @@ global xu_probefl
 global lower_xl
 global lower_eval
 global lowerlocal_record
+global lowerlocalsuccess_record2
 global lower_mdl
+global lower_trg
+global g
+global gpr_mdl
+g = 1;
 
 upper_xu = [];
 lower_xl = [];
 xu_probefl = [];
 lower_eval = 0;
 lowerlocal_record = [];
+lowerlocalsuccess_record2 = [];
 lower_mdl = {};
+lower_trg ={};
+gpr_mdl = [];
 
 % obj = VideoWriter('moving.avi');
 % obj.Quality= 100;
@@ -73,9 +83,8 @@ lower_mdl = {};
 
 [best_x, ~, ~, a, ~] = gsolver(funh_obj, num_xvar, lb, ub, initmatrix, funh_con, param,  'externalfunction', funh_external,  'visualize', false);
 
-
 % obj.close();
-save_results(upper_xu, lower_xl, prob,  seed, use_seeding, rn, lower_eval, lowerlocal_record, decision_making);
+save_results(upper_xu, lower_xl, prob,  seed, use_seeding, rn, lower_eval, lowerlocal_record, decision_making, seeding_strategy, lowerlocalsuccess_record2);
 end
 
 function out = up_probrecord(pop, xl_probe, prob)
@@ -86,14 +95,18 @@ global xu_probefl
 global upper_xu
 global lower_xl
 global lower_mdl
+global lower_trg
 
 
 upper_xu = [upper_xu; pop.X];
 lower_xl = [lower_xl; pop.A];
 lower_mdl = [lower_mdl, pop.Mdl];
+lower_trg = [lower_trg, pop.trgdata];
 
 n = size(xl_probe, 1);
 m = size(pop.X, 1);
+
+
 for i =1:m
     xui = repmat(pop.X(i, :), n, 1);
     fl_probe = prob.evaluate_l(xui, xl_probe);
@@ -103,44 +116,74 @@ out = [];
 end
 
 
-function [output] =  up_objective_func(prob, xu, xl_probe, use_seeding, rn, decision_making)
+function [output] =  up_objective_func(prob, xu, xl_probe, use_seeding, rn, decision_making, seed, seeding_strategy)
 global xu_probefl
 global upper_xu
 global lower_xl
 
 
+global g
 % upper xu and lower level does not change at the same time, 
 % upper_xu changes in generation wise, lower_xl changes in each xu's
 % evaluation step. they should eventually have the same size.
+fprintf('upper generation: %d \n', g);
 
+
+g = g + 1;
 
 m = size(xu, 1);
 f = [];
 xl = [];
 mdls = {};
+trgdatas = {};
+
+
+
 
 for i = 1:m
+    fprintf('ind %d \n ', i);
     xui = xu(i, :);
-  
-    [match_xl, mdl] =  llmatch_trueEvaluation(xui, prob,  20, xl_probe, ...
+    
+    [match_xl, mdl, trgdata] =  llmatch_trueEvaluation(xui, prob,  20, xl_probe, ...
         'lower_archive', xu_probefl, 'archive', upper_xu, 'lower_xl', lower_xl,...
-        'seeding_only', use_seeding, 'restartn', rn, 'decision_making', decision_making);
+        'seeding_only', use_seeding, 'restartn', rn, 'decision_making', decision_making,...
+        'seed', seed, 'global_half', false, ...
+        'seeding_strategy', seeding_strategy);
+    
+    
     fi = prob.evaluate_u(xui, match_xl);
     xl = [xl; match_xl];
     f  = [f; fi];
     mdls{end+1} = mdl;
+    trgdatas{end+1} = trgdata;
+    
 end
+fprintf('\n');
+
+
+% save('firstgen_mdls.mat', 'mdls');
+% save('firstgen_data.mat', 'trgdatas');
+
+% clear mdls;
+% clear trgdatas;
+% load('firstgen_mdls.mat');
+% load('firstgen_data.mat');
+
 
 output.f = f;
 output.addon = xl; 
 output.mdl = mdls;
+output.trgdata = trgdatas;
+
+
+
 end
 
 function c = up_constraint_func(prob, xu)
 c = [];
 end
 
-function  save_results(xu, xl, prob, seed, use_seeding, rx, lower_eval, lowerlocal_record, decision_making)
+function  save_results(xu, xl, prob, seed, use_seeding, rx, lower_eval, lowerlocal_record, decision_making, seeding_strategy, lowerlocalsuccess_record2)
 
 [fu, cu] = prob.evaluate_u(xu, xl); % lazy  step
 [fl, cl] = prob.evaluate_l(xu, xl);
@@ -153,11 +196,11 @@ if n ~= 7
 end
 
 if use_seeding
-    foldername = strcat(prob.name, '_seeding');
-    foldername = strcat(prob.name, num2str(rx));
+    foldername = strcat(prob.name, '_seeding_', num2str(seeding_strategy));
+    foldername = strcat(foldername, '_rand_', num2str(rx));
 else
     if decision_making
-        foldername = strcat(prob.name, '_correctionsur');
+        foldername = strcat(prob.name, '_cokrg');
     else
         foldername = strcat(prob.name, '_baseline');
     end
@@ -201,6 +244,12 @@ filename = strcat('lower_success_seed_', num2str(seed), '.csv');
 savename = fullfile(resultfolder, filename);
 csvwrite(savename, lowerlocal_record);
 
+
+if ~isempty(lowerlocalsuccess_record2)
+    filename = strcat('lower_success2_seed_', num2str(seed), '.csv');
+    savename = fullfile(resultfolder, filename);
+    csvwrite(savename, lowerlocalsuccess_record2);
+end
 
 if size(fu, 2) > 1
     % fu nd front

@@ -12,5 +12,12 @@ if ~isempty(pop.A)
     pop.A = pop.A(1: popsize, :);
 end
 
+if ~isempty(pop.Mdl)
+    pop.Mdl = pop.Mdl(1: popsize);
+end
+
+if ~isempty(pop.trgdata)
+    pop.trgdata = pop.trgdata(1: popsize);
+end
 
 return

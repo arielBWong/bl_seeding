@@ -21,10 +21,12 @@ if isstruct(output)
     child.F = output.f;
     child.A = output.addon;
     child.Mdl = output.mdl;
+    child.trgdata = output.trgdata;
 else
     child.F = output;
     child.A = [];
     child.Mdl = {};
+    child.trgdata = {};
 end
 
 
@@ -39,8 +41,9 @@ pop.F = [pop.F; child.F];
 pop.C = [pop.C; child.C];
 pop.A = [pop.A; child.A];
 pop.Mdl = [pop.Mdl, child.Mdl]; % deliminator is ,
+pop.trgdata = [pop.trgdata, child.trgdata];
 
-[pop.F, pop.X, pop.C, pop.A, pop.Mdl] = pop_sort(pop.F, pop.X, pop.C, pop.A, pop.Mdl);
+[pop.F, pop.X, pop.C, pop.A, pop.Mdl, pop.trgdata] = pop_sort(pop.F, pop.X, pop.C, pop.A, pop.Mdl, pop.trgdata);
 
 % dealing with feasibility on lower level
 if ~isempty(varargin)

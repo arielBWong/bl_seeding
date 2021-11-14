@@ -57,7 +57,6 @@ if visualize
     obj.Quality= 100;
     obj.FrameRate = 25;
     open(obj);
-
 end
 
 
@@ -84,13 +83,13 @@ end
 
 
 gen=1;
-while gen<= param.gen
+while gen <= param.gen
     % Recombination
     % child.X=generate_child(lb, ub, pop, param);
-    child.X=generate_child2(lb, ub, pop, param);
+    child.X = generate_child2(lb, ub, pop, param);
     
     % Evaluate and Order(need to test varargin)
-    [pop,archive]= evaluate_order(pop,archive, funh_obj, funh_con, child.X, gen, param);
+    [pop,archive]= evaluate_order(pop, archive, funh_obj, funh_con, child.X, gen, param);
     
     % Reduce 2N to N
     [pop]=reduce_pop(pop,param.popsize);

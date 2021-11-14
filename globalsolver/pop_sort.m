@@ -1,21 +1,24 @@
-function [sf, sx, sc, sa] = pop_sort(f, x, c, a)
+function [sf, sx, sc, sa, sm, sd] = pop_sort(f, x, c, a, m, d)
 % auxiliary function
 % this function sort evoluation popluation w.r.t.
 % number of objectives
 % constraints
 % nd sort is not compatible with single objective problems
 % input
-%               f                                                       %  objective population
-%               x                                                       %  design variable population
-%               c                                                       %  constraints population
-%               a
-%              
+%               f   %  objective population
+%               x   %  design variable population
+%               c   %  constraints population
+%               a   % add on,(e.g. xl for matching lower level solutions)                                                  
+%               m   % add on, cell array  (e.g. surrogate model from lower)
+%               d   % add on, cell array (e.g. training data for surrogate model)
 %               
 % output
-%               sf                                                      % sorted objective population
-%               sx                                                      % sorted design variable population
-%               sc                                                      % sorted constraints population
-%               sa
+%               sf  % sorted objective population
+%               sx  % sorted design variable population
+%               sc  % sorted constraints population
+%               sa  % sorted addon
+%               sm  % sorted addon (e.g. surrogate model from lower level)
+%               sd  % sorted addon (e.g. training data for addon)
 %-----------------------------------------------------
 
 numcon = size(c, 2);
@@ -28,18 +31,37 @@ if numcon == 0                                                  % unconstraint p
     else                                                        % so problem
         [~, ids] = sort(f);                                     % acending sort/minimization
     end
-    sf = f(ids,:);
+    sf = f(ids, :);
     sx = x(ids, :);
+    
     % process addon
     if ~isempty(a)
         sa =  a(ids,:);
     else
         sa = [];
     end
+    
+    if ~isempty(m)
+        sm = m(ids);       
+    else
+        sm = {};
+    end
+    
+    if ~isempty(d)
+        sd = d(ids);       
+    else
+        sd = {};
+    end
+    
+    
+    
     return;
 end
 
-sa = []; % for cases sa is not used
+sa = []; % for cases a is empty
+sm = {}; % for cases m is empty
+sd = {}; % for cases d is empty
+fprintf('pop_sort.m sorting on addons with constraint problems need to test \n');
 if numcon>0
     % Ordering considers constraints
     c(c<=0) = 0;
@@ -58,6 +80,13 @@ if numcon>0
         fy_A = a(fy_ind, :); cv_A = a(cv_ind, :); 
     end
     
+    if ~isempty(m)
+        fy_M = m(fy_ind); cv_M = m(cv_ind);
+    end
+    
+    if ~isempty(d)
+        fy_D = d(fy_ind); cv_D = d(cv_ind);
+    end
     
     % sort feasible
     if numobj>1
@@ -68,6 +97,12 @@ if numcon>0
     fy_F = fy_F(ids, :); fy_C = fy_C(ids, :); fy_X = fy_X(ids, :);
     if ~isempty(a)
         fy_A = fy_A(ids, :);
+    end    
+    if ~isempty(m)
+        fy_M = fy_M(ids);
+    end
+     if ~isempty(d)
+        fy_D = fy_D(ids);
     end
     
     % sort infeasible
@@ -81,11 +116,26 @@ if numcon>0
     if ~isempty(a)
         cv_A = cv_A(idc, :);
     end
+    if ~isempty(m)
+        cv_M = cv_M(idc); % cell reorder, use ()
+    end
+    
+    if ~isempty(d)
+        cv_D = cv_D(idc); % cell reorder, use ()
+    end
     
     % replace unsorted each fields of pop
     sf = [fy_F; cv_F]; sc= [fy_C; cv_C]; sx = [fy_X; cv_X]; 
     if ~isemtpy(a)
         sa = [fy_A; cv_A];
+    end
+    
+    if ~isempty(m)
+        sm = [fy_M, cv_M]; % use [] to concatenate cell arrays
+    end
+    
+    if ~isempty(d)
+        sd = [fy_D, cv_D]; % use [] to concatenate cell arrays
     end
 end
 end

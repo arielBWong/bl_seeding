@@ -46,9 +46,9 @@ llmatch_p.prob                = prob;
 llmatch_p.egostr              = infill_metodstr;
 llmatch_p.egofnormstr         = 'normalization_z';    %  Only for place holder/ original Believer and EGO will need
 llmatch_p.seed                = seed;
-llmatch_p.localsearch        = localsearch;
-llmatch_p.method           = method;
-llmatch_p.localmethod    = [];
+llmatch_p.localsearch         = localsearch;
+llmatch_p.method              = method;
+llmatch_p.localmethod         = [];
 
 
 % pf = prob.upper_pf(100);

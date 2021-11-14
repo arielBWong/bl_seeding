@@ -33,10 +33,12 @@ if isstruct(output) % customized
     F_pop   = output.f;
     A_pop   = output.addon;
     Mdl_pop = output.mdl;
+    trg_pop = output.trgdata;
 else
     F_pop   = output;
     A_pop   = [];
     Mdl_pop = {};
+    trg_pop = {};
 end
 
 C_pop     = funh_con(X_pop);
@@ -60,6 +62,11 @@ else
     pop.Mdl = Mdl_pop(ids);
 end
 
+if isempty(trg_pop)
+    pop.trgdata = {};
+else
+    pop.trgdata = trg_pop(ids);
+end
 
 
 if isempty(C_pop)
