@@ -7,7 +7,7 @@ problems = { 'smd1mp(1, 2, 1)' , 'smd2mp(1, 2, 1)',  'smd3mp(1, 2, 1)',  'smd4mp
 % problems = { 'smd1mp(1, 1, 1)' , 'smd2mp(1, 1, 1)',  'smd3mp(1, 1, 1)',  'smd4mp(1, 1, 1)', ....
 %      'smd5mp(1, 1, 1)' , 'smd6mp(1, 0, 1, 1)', 'smd7mp(1, 1, 1)',  'smd8mp(1, 1, 1)'};
 
-% problems = { 'smd1mp(1, 1, 1)'};
+problems = { 'smd1mp(1, 1, 1)'};
 method = {'_baseline', '0', '1',  '_cokrg'};
 prob_test = eval(problems{1});
 nv = prob_test.n_lvar;

@@ -9,7 +9,7 @@ problems = { 'smd1mp(1, 2, 1)' , 'smd2mp(1, 2, 1)',  'smd3mp(1, 2, 1)',  'smd4mp
 
 
 method = {'', '0', '1'};
-resultfolder = fullfile(pwd, 'resultfolder_2');
+resultfolder = fullfile(pwd, 'resultfolder_trueEval2');
 
 np = length(problems);
 seed = 29;

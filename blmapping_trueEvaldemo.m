@@ -35,9 +35,9 @@ prob = eval(prob_str);
 
 %------------------Process starts--------------------
 % insert global search
-inisize_l       = 20;
-xl_probe        = lhsdesign(inisize_l, prob.n_lvar, 'criterion','maximin','iterations',1000);
-xl_probe        = repmat(prob.xl_bl, inisize_l, 1) ...
+inisize_l     = 20;
+xl_probe      = lhsdesign(inisize_l, prob.n_lvar, 'criterion','maximin','iterations',1000);
+xl_probe      = repmat(prob.xl_bl, inisize_l, 1) ...
     + repmat((prob.xl_bu - prob.xl_bl), inisize_l, 1) .* xl_probe;
 
 funh_external = @(pop)up_probrecord(pop,  xl_probe, prob);
@@ -60,6 +60,8 @@ global lower_xl
 global lower_eval
 global lowerlocal_record
 global lowerlocalsuccess_record2
+global lowerlocal_recordWhichoptimal
+global lowerlocal_recordHitboundary
 global lower_mdl
 global lower_trg
 global g
@@ -72,19 +74,23 @@ xu_probefl = [];
 lower_eval = 0;
 lowerlocal_record = [];
 lowerlocalsuccess_record2 = [];
+lowerlocal_recordWhichoptimal = [];
+lowerlocal_recordHitboundary = [];
 lower_mdl = {};
 lower_trg ={};
 gpr_mdl = [];
 
+
 % obj = VideoWriter('moving.avi');
-% obj.Quality= 100;
+% obj.Quality = 100;
 % obj.FrameRate = 25;
 % open(obj);
 
 [best_x, ~, ~, a, ~] = gsolver(funh_obj, num_xvar, lb, ub, initmatrix, funh_con, param,  'externalfunction', funh_external,  'visualize', false);
 
 % obj.close();
-save_results(upper_xu, lower_xl, prob,  seed, use_seeding, rn, lower_eval, lowerlocal_record, decision_making, seeding_strategy, lowerlocalsuccess_record2);
+save_results(upper_xu, lower_xl, prob,  seed, use_seeding, rn, lower_eval, lowerlocal_record, decision_making, seeding_strategy, lowerlocalsuccess_record2, lowerlocal_recordWhichoptimal);
+
 end
 
 function out = up_probrecord(pop, xl_probe, prob)
@@ -120,16 +126,13 @@ function [output] =  up_objective_func(prob, xu, xl_probe, use_seeding, rn, deci
 global xu_probefl
 global upper_xu
 global lower_xl
-
-
 global g
-% upper xu and lower level does not change at the same time, 
+% upper xu and lower level does not change at the same time,
 % upper_xu changes in generation wise, lower_xl changes in each xu's
 % evaluation step. they should eventually have the same size.
-fprintf('upper generation: %d \n', g);
+% fprintf('upper generation: %d \n', g);
 
 
-g = g + 1;
 
 m = size(xu, 1);
 f = [];
@@ -137,21 +140,28 @@ xl = [];
 mdls = {};
 trgdatas = {};
 
-
-
-
+vis= false;
 for i = 1:m
-    fprintf('ind %d \n ', i);
+    fprintf('gen %d, ind %d \n ', g, i);
     xui = xu(i, :);
     
-    [match_xl, mdl, trgdata] =  llmatch_trueEvaluation(xui, prob,  20, xl_probe, ...
+%     if g == 4 && i ==5
+%         a = 0;
+%     end
+    
+    [match_xl, mdl, trgdata] = llmatch_trueEvaluation(xui, prob,  20, xl_probe, ...
         'lower_archive', xu_probefl, 'archive', upper_xu, 'lower_xl', lower_xl,...
         'seeding_only', use_seeding, 'restartn', rn, 'decision_making', decision_making,...
         'seed', seed, 'global_half', false, ...
-        'seeding_strategy', seeding_strategy);
+        'seeding_strategy', seeding_strategy, ...
+        'visualization', vis);
     
-    
+    vis = false;
     fi = prob.evaluate_u(xui, match_xl);
+    
+    if fi < -10
+        plotBothLevel(xui, match_xl, prob);
+    end
     xl = [xl; match_xl];
     f  = [f; fi];
     mdls{end+1} = mdl;
@@ -159,7 +169,7 @@ for i = 1:m
     
 end
 fprintf('\n');
-
+g = g + 1;
 
 % save('firstgen_mdls.mat', 'mdls');
 % save('firstgen_data.mat', 'trgdatas');
@@ -171,11 +181,9 @@ fprintf('\n');
 
 
 output.f = f;
-output.addon = xl; 
+output.addon = xl;
 output.mdl = mdls;
 output.trgdata = trgdatas;
-
-
 
 end
 
@@ -183,9 +191,9 @@ function c = up_constraint_func(prob, xu)
 c = [];
 end
 
-function  save_results(xu, xl, prob, seed, use_seeding, rx, lower_eval, lowerlocal_record, decision_making, seeding_strategy, lowerlocalsuccess_record2)
+function  save_results(xu, xl, prob, seed, use_seeding, rx, lower_eval, lowerlocal_record, decision_making, seeding_strategy, lowerlocalsuccess_record2, lowerlocal_recordWhichoptimal)
 
-[fu, cu] = prob.evaluate_u(xu, xl); % lazy  step
+[fu, cu] = prob.evaluate_u(xu, xl);   % lazy  step
 [fl, cl] = prob.evaluate_l(xu, xl);
 
 name = strcat('resultfolder_trueEval', num2str(prob.n_lvar));
@@ -244,6 +252,9 @@ filename = strcat('lower_success_seed_', num2str(seed), '.csv');
 savename = fullfile(resultfolder, filename);
 csvwrite(savename, lowerlocal_record);
 
+filename = strcat('lower_WhichLocalOptimal_seed_', num2str(seed), '.csv');
+savename = fullfile(resultfolder, filename);
+csvwrite(savename, lowerlocal_recordWhichoptimal);
 
 if ~isempty(lowerlocalsuccess_record2)
     filename = strcat('lower_success2_seed_', num2str(seed), '.csv');
@@ -285,12 +296,49 @@ else
     filename = strcat('final_accuracy_seed_', num2str(seed), '.csv');
     savename = fullfile(resultfolder, filename);
     csvwrite(savename, [ulp, llp]);
-    
 end
 
 
 end
 
+function [] = plotBothLevel(xui, match_xl, prob)
 
+fignh               = figure(3);
+fignh.Position      = [50, 100, 1000, 400];
+nt                  = 100;
+
+x1_tst              = linspace(prob.xu_bl(1), prob.xu_bu(1), nt);
+x2_tst              = linspace(prob.xu_bl(2), prob.xu_bu(2), nt);
+[msx1, msx2]        = meshgrid(x1_tst, x2_tst);
+msx11 = msx1(:);
+msx22 = msx2(:);
+xu  = [msx11, msx22];
+xlprime = prob.get_xlprime(xu);
+fu  = prob.evaluate_u(xu, xlprime);
+fu  = reshape(fu, [nt, nt]);
+
+subplot(1, 2, 1);
+surf(msx1, msx2, fu, 'FaceAlpha',0.5, 'EdgeColor', 'none'); hold on;
+
+F = prob.evaluate_u(xui, match_xl);
+scatter3(xui(1), xui(2), F,  80, 'r', 'filled' ); hold on;
+
+subplot(1, 2, 2);
+x1_tst              = linspace(prob.xl_bl(1), prob.xl_bu(1), nt);
+x2_tst              = linspace(prob.xl_bl(2), prob.xl_bu(2), nt);
+[msx1, msx2]        = meshgrid(x1_tst, x2_tst);
+msx11 = msx1(:);
+msx22 = msx2(:);
+xl  = [msx11, msx22];
+xu =  repmat(xui, nt*nt, 1);
+f = prob.evaluate_l(xu, xl);
+f = reshape(f, [nt, nt]);
+
+surf(msx1, msx2, f,  'FaceAlpha',0.5, 'EdgeColor', 'none'); hold on;
+f = prob.evaluate_l(xui, match_xl);
+scatter3(match_xl(1), match_xl(2), f,  80, 'r', 'filled' ); hold on;
+
+pause(1);
+end
 
 

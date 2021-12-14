@@ -74,8 +74,6 @@ for i = 1:inisize_u
     fprintf('Initialition xu matching process iteration %d\n', i);
     [xl_single, n, flag, lower_archive]   = llmatch_keepdistance(xu(i, :), llmatch_p, 'visualization', false, 'lower_archive', lower_archive);
     artificial_flag     = [artificial_flag; flag];
-    % xl_single         = prob.get_xlprime(xu(i, :));
-    % n                 = 0;
      xl                    = [xl; xl_single];
      n_FE                = n_FE + n;
 end

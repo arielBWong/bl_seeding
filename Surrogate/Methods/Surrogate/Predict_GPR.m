@@ -9,9 +9,9 @@ end
 
 for i=1:length(gprMdl)
     if(param.GPR_type==1)
-        [tmp_mu,tmp_sigma]=predict(gprMdl{i},x_tst);
+        [tmp_mu,tmp_sigma] = predict(gprMdl{i},x_tst);
     else
-        [tmp_mu,tmp_sigma]=Predict_DACE(gprMdl{i},x_tst,i);
+        [tmp_mu,tmp_sigma] = Predict_DACE(gprMdl{i},x_tst,i);
     end
     
     % Replacing the predicted values by true values if they have been evaluated

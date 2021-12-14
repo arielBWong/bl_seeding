@@ -31,8 +31,8 @@ addRequired(p,   'ub');
 addRequired(p,   'initmatrix');
 addRequired(p,   'funh_con');
 addRequired(p,   'param');
-addParameter(p, 'externalfunction', []);
-addParameter(p, 'visualize', false);
+addParameter(p,  'externalfunction', []);
+addParameter(p,  'visualize', false);
 parse(p, funh_obj, num_xvar, lb, ub, initmatrix, funh_con, param, varargin{:});
 %-------
 
@@ -107,10 +107,10 @@ while gen <= param.gen
     
     if  visualize && size(lb, 2) == 2&& isempty(external_funh) 
         plot2d(f1, lb, ub, param, pop, funh_obj);
-        frame = getframe(gcf);
-         for i = 1: 20
-             writeVideo(obj, frame);
-         end
+%         frame = getframe(gcf);
+%          for i = 1: 20
+%              writeVideo(obj, frame);
+%          end
         
     end
     
@@ -120,10 +120,10 @@ while gen <= param.gen
     
      if visualize && size(lb, 2) == 2 && ~isempty(external_funh)
          plot2dupper(f1, lb, ub, pop);
-         frame = getframe(gcf);
-         for i = 1: 20
-             writeVideo(obj, frame);
-         end
+%          frame = getframe(gcf);
+%          for i = 1: 20
+%              writeVideo(obj, frame);
+%          end
          
      end
 
