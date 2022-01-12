@@ -92,9 +92,7 @@ if ~isempty(archive_xu) && seeding_only                              % first gen
         [match_fl, match_cl] = prob.evaluate_l(xu, match_xl);         % additional lazy step, can be extracted from local search results        
         trgdata = [history.x, history.fval];
         return;
-        
     end
-    
     
     if seeding_strategy == 2 % cokrging   
         [expensive_x, cheap_x, cheap_f, correlation, close_optxu, close_optxl, global_xl, global_fl, sigma] = cokrg_trainingExtraction(xu, archive_xu, lower_trg, prob, global_halfsize, lower_xl, global_halfflag);
@@ -102,12 +100,6 @@ if ~isempty(archive_xu) && seeding_only                              % first gen
         dist = pdist2(xu, archive_xu);                                 % this xu is upper level new infill xu, not added into archive_xu
         [~, idx] = sort(dist);
         
-%         for i = 1: length(idx)
-%             if size(lower_trg{idx(i)}, 1) > 500
-%                 close_id = i;
-%                 break
-%             end
-%         end
         close_id = idx(1);
         maxFE = maxFE - size(expensive_x, 1) + 1; 
         
@@ -159,8 +151,6 @@ if ~isempty(archive_xu) && seeding_only                              % first gen
         else
             initmatrix = expensive_x;
         end
-
-        
     end
     
     
@@ -268,8 +258,8 @@ xudistance_decision = true;
 visual_local = false;
 
 
-if decision_making                                                  % if decision_making is set false, means that global search
-    if ~isempty(lower_archive_xu) && ~isempty(archive_xu)                 % when archive_xu is passed in, means can do closeness check
+if decision_making                                                         % if decision_making is set false, means that global search
+    if ~isempty(lower_archive_xu) && ~isempty(archive_xu)                  % when archive_xu is passed in, means can do closeness check
 
         % only use xu distance to determine similar landscape
         if xudistance_decision
@@ -320,7 +310,7 @@ ub = prob.xl_bu;
 num_xvar = prob.n_lvar;
 % initmatrix = [];
 
-[best_x, best_f, best_c, archive_xu ,~] = gsolver(funh_obj, num_xvar, lb, ub, initmatrix, funh_con, param, 'visualize', false);
+[best_x, best_f, best_c, archive_xu, ~] = gsolver(funh_obj, num_xvar, lb, ub, initmatrix, funh_con, param, 'visualize', false);
 s = 1;
 
 lower_eval = lower_eval + (param.gen + 1) * param.popsize - size(initmatrix, 1); % because before similarity, there is an adding evaluation step

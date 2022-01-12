@@ -3,12 +3,12 @@ function blmapping_trueEvaldemo(problem_str, seed, varargin)
 %
 % parse input
 p = inputParser;
-addRequired(p,  'problem_str');
-addRequired(p,  'seed');
-addParameter(p, 'decision_making', true);
-addParameter(p, 'restart_num', 0);
-addParameter(p, 'use_seeding', false);
-addParameter(p, 'seeding_strategy', 1);
+addRequired(p,'problem_str');
+addRequired(p,'seed');
+addParameter(p,'decision_making', true);
+addParameter(p,'restart_num', 0);
+addParameter(p,'use_seeding', false);
+addParameter(p,'seeding_strategy', 1);
 parse(p, problem_str, seed, varargin{:});
 
 %--- assign input parameters
@@ -145,10 +145,6 @@ for i = 1:m
     fprintf('gen %d, ind %d \n ', g, i);
     xui = xu(i, :);
     
-%     if g == 4 && i ==5
-%         a = 0;
-%     end
-    
     [match_xl, mdl, trgdata] = llmatch_trueEvaluation(xui, prob,  20, xl_probe, ...
         'lower_archive', xu_probefl, 'archive', upper_xu, 'lower_xl', lower_xl,...
         'seeding_only', use_seeding, 'restartn', rn, 'decision_making', decision_making,...
@@ -159,9 +155,10 @@ for i = 1:m
     vis = false;
     fi = prob.evaluate_u(xui, match_xl);
     
-    if fi < -10
-        plotBothLevel(xui, match_xl, prob);
-    end
+%     if fi < -10
+%         plotBothLevel(xui, match_xl, prob);
+%     end
+ 
     xl = [xl; match_xl];
     f  = [f; fi];
     mdls{end+1} = mdl;
