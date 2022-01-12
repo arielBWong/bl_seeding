@@ -35,28 +35,27 @@ prob = eval(prob_str);
 
 %------------------Process starts--------------------
 % insert global search
-inisize_l     = 20;
-xl_probe      = lhsdesign(inisize_l, prob.n_lvar, 'criterion','maximin','iterations',1000);
-xl_probe      = repmat(prob.xl_bl, inisize_l, 1) ...
+inisize_l = 20;
+xl_probe = lhsdesign(inisize_l, prob.n_lvar, 'criterion','maximin','iterations',1000);
+xl_probe = repmat(prob.xl_bl, inisize_l, 1) ...
     + repmat((prob.xl_bu - prob.xl_bl), inisize_l, 1) .* xl_probe;
 
 funh_external = @(pop)up_probrecord(pop,  xl_probe, prob);
 
 
-funh_obj  =  @(x)up_objective_func(prob, x, xl_probe, use_seeding, rn, decision_making, seed, seeding_strategy);
+funh_obj  =  @(x)up_objective_func(prob, x, xl_probe, use_seeding, decision_making, seeding_strategy);
 funh_con  =  @(x)up_constraint_func(prob, x);
 
 param.gen = 9;
-%param.gen = 1;
 param.popsize = 50;
 lb = prob.xu_bl;
 ub = prob.xu_bu;
 num_xvar = prob.n_uvar;
 initmatrix = [];
 
-global upper_xu
+global upper_xu  % upper archive 
 global xu_probefl
-global lower_xl
+global lower_xl   % lower archive
 global lower_eval
 global lowerlocal_record
 global lowerlocalsuccess_record2
@@ -80,11 +79,6 @@ lower_mdl = {};
 lower_trg ={};
 gpr_mdl = [];
 
-
-% obj = VideoWriter('moving.avi');
-% obj.Quality = 100;
-% obj.FrameRate = 25;
-% open(obj);
 
 [best_x, ~, ~, a, ~] = gsolver(funh_obj, num_xvar, lb, ub, initmatrix, funh_con, param,  'externalfunction', funh_external,  'visualize', false);
 
@@ -122,8 +116,8 @@ out = [];
 end
 
 
-function [output] =  up_objective_func(prob, xu, xl_probe, use_seeding, rn, decision_making, seed, seeding_strategy)
-global xu_probefl
+function [output] =  up_objective_func(prob, xu, xl_probe, use_seeding,  decision_making, seeding_strategy)
+
 global upper_xu
 global lower_xl
 global g
@@ -131,8 +125,6 @@ global g
 % upper_xu changes in generation wise, lower_xl changes in each xu's
 % evaluation step. they should eventually have the same size.
 % fprintf('upper generation: %d \n', g);
-
-
 
 m = size(xu, 1);
 f = [];
@@ -145,44 +137,28 @@ for i = 1:m
     fprintf('gen %d, ind %d \n ', g, i);
     xui = xu(i, :);
     
-    [match_xl, mdl, trgdata] = llmatch_trueEvaluation(xui, prob,  20, xl_probe, ...
-        'lower_archive', xu_probefl, 'archive', upper_xu, 'lower_xl', lower_xl,...
-        'seeding_only', use_seeding, 'restartn', rn, 'decision_making', decision_making,...
-        'seed', seed, 'global_half', false, ...
+    [match_xl, mdl, trgdata] = llmatch_trueEvaluation(xui, prob,  xl_probe, ...
+        'archive', upper_xu, 'archive_xl', lower_xl,...
+        'seeding_only', use_seeding, 'decision_making', decision_making,...
         'seeding_strategy', seeding_strategy, ...
         'visualization', vis);
-    
-    vis = false;
     fi = prob.evaluate_u(xui, match_xl);
     
-%     if fi < -10
-%         plotBothLevel(xui, match_xl, prob);
-%     end
- 
     xl = [xl; match_xl];
-    f  = [f; fi];
+    f = [f; fi];
     mdls{end+1} = mdl;
     trgdatas{end+1} = trgdata;
-    
 end
+
 fprintf('\n');
 g = g + 1;
-
-% save('firstgen_mdls.mat', 'mdls');
-% save('firstgen_data.mat', 'trgdatas');
-
-% clear mdls;
-% clear trgdatas;
-% load('firstgen_mdls.mat');
-% load('firstgen_data.mat');
-
 
 output.f = f;
 output.addon = xl;
 output.mdl = mdls;
 output.trgdata = trgdatas;
-
 end
+
 
 function c = up_constraint_func(prob, xu)
 c = [];

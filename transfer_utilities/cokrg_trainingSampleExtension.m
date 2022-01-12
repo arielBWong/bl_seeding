@@ -1,11 +1,12 @@
-function [expensive_x, cheap_x, cheap_f, correlation, close_optxu, close_optxl, global_xl, global_fl, sigma, close_id] = cokrg_trainingSampleExtension(xu , ...
-    archive_xu, lower_trg, prob, samplesize, lower_xl)
+function [expensive_x, cheap_x, cheap_f, correlation, close_optxu, close_optxl, global_xl, global_fl, sigma, close_id] = ...
+    cokrg_trainingSampleExtension(xu, ...
+    archive_xu, lower_searchdata_cly, prob, samplesize, archive_xl)
 % this function identify close landscape for kriging (the one with global search)
 % and identify training data for both Hx and Lx
-dist = pdist2(xu , archive_xu);                                % this xu is upper level new infill xu, not added into archive_xu
+dist = pdist2(xu, archive_xu); % this xu is upper level new infill xu, not added into archive_xu
 [~, idx] = sort(dist);
 for i = 1: length(idx)
-    if size(lower_trg{idx(i)}, 1) > 500
+    if size(lower_searchdata_cly{idx(i)}, 1) > 500
         close_id = idx(i);
         break
     end
@@ -16,13 +17,13 @@ global_xl = [];
 global_fl = [];
 
 seed_xu = archive_xu(close_id, :);
-seed_xl = lower_xl(close_id, :);
+seed_xl = archive_xl(close_id, :);
 
 close_optxu = seed_xu;
 close_optxl = seed_xl;
 
-ns = samplesize * 2;
-close_xlarchive = lower_trg{close_id}(:, 1:end-1);
+ns = samplesize;
+close_xlarchive = lower_searchdata_cly{close_id}(:, 1:end-1);
 
 
 sigma = covariation(close_xlarchive, seed_xl);
@@ -41,8 +42,8 @@ while size(xl_samples, 1) < ns
     
     mask_lbcomply = R > prob.xl_bl;
     mask_ubcomply = R < prob.xl_bu;
-    mask_comply   = mask_lbcomply .* mask_ubcomply; %
-    mask_comply   = sum(mask_comply, 2);
+    mask_comply = mask_lbcomply .* mask_ubcomply; %
+    mask_comply = sum(mask_comply, 2);
     
     idx = mask_comply == prob.n_lvar;
     tmp = R(idx, :);

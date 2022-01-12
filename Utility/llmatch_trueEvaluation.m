@@ -1,55 +1,45 @@
-function[match_xl, mdl, trgdata] = llmatch_trueEvaluation(upper_xu, prob, init_size, xl_probe, varargin)
+function[match_xl, mdl, trgdata] = llmatch_trueEvaluation(upper_xu, prob, xl_probe, varargin)
 % method of searching for a match xl for xu.
 % Problem(Prob) definition require certain formation for bilevel problems
 % evaluation method should be of  form 'evaluation_l(xu, xl)'
 %--------------------------------------------------------------------------
 % distribute parameters
-%
 % parse input
 %-------
 p = inputParser;
 addRequired(p, 'upper_xu');
 addRequired(p, 'prob');
-addRequired(p, 'init_size');
 addRequired(p, 'xl_probe');
 addParameter(p, 'visualization', false);
-addParameter(p, 'lower_archive_xu', []);                           % probing archive_xu
-addParameter(p, 'seeding_only', false);                            % conduct seeding controller
-addParameter(p, 'restartn', 0);                                    % additional restart times
-addParameter(p, 'archive_xu', []);                                 % upper level all evaluated xu
-addParameter(p, 'lower_xl', []);                                   % lower level matching xl, might larger than xu due to asynsic update
-addParameter(p, 'decision_making', true);                          % if this variable is set to false, means lower level is global search
-addParameter(p, 'global_halfflag', false);
-addParameter(p, 'seed', -1);
-addParameter(p, 'seeding_strategy', 1); % 1 naive starting 2 cokrging starting
-parse(p, upper_xu, prob, init_size, xl_probe, varargin{:});
+addParameter(p, 'seeding_only', false);  % conduct seeding controller
+addParameter(p, 'archive_xu', []);  % upper level all evaluated xu
+addParameter(p, 'archive_xl', []);  % lower level matching xl, might larger than xu due to asynsic update
+addParameter(p, 'decision_making', true); % if this variable is set to false, means lower level is global search
+addParameter(p, 'seeding_strategy', 1); % 1 nearest neighbour 2 cokrging starting
+parse(p, upper_xu, prob, xl_probe, varargin{:});
 % -----------------------------------
 
 xu = p.Results.upper_xu;
 visualization = p.Results.visualization;
 seeding_only = p.Results.seeding_only;
-rn = p.Results.restartn;
 lower_archive_xu =p.Results.lower_archive_xu;
 archive_xu = p.Results.archive_xu;
 init_size = p.Results.init_size;
 xl_probe = p.Results.xl_probe;
 prob = p.Results.prob;
-lower_xl = p.Results.lower_xl;
+archive_xl = p.Results.archive_xl;
 decision_making = p.Results.decision_making;
-seed = p.Results.seed;
-global_halfflag = p.Results.global_halfflag;
 seeding_strategy = p.Results.seeding_strategy;
 %------------------------------------------------
 
 global lower_eval
 global lowerlocal_record
-global lowerlocalsuccess_record2
 global lower_trg
 global lowerlocal_recordWhichoptimal
-global lowerlocal_recordHitboundary;
+
 %-------------------------------------------------
 
-
+cokrg_samplesize = 20;
 mdl = 'position_holder';
 trgdata = 'position_holder';
 initmatrix = []; %
@@ -59,80 +49,31 @@ funh_con = @(x)constraint_func(prob, xu, x);
 
 
 %-- lower level initialization
-% if ~isempty(lower_archive_xu)                                      % for lower level archive_xu
-% train_xl = xl_probe;
-
 global_halfsize = 10;
 % include seeding xl
-if ~isempty(archive_xu) && seeding_only                              % first generation on the upper level use global search
-    ideal_xl      = prob.get_xlprime(xu);
-    [ideal_fl, ~] = prob.evaluate_l(xu, ideal_xl);
-      
-    if rn>0 
-        maxFE = 500; else
-        maxFE = 1000;
-    end
-     
-    if seeding_strategy == 1                                         % closest landscape
-        dist = pdist2(xu , archive_xu);                              % this xu is upper level new infill xu, not added into archive_xu
-        [~, idx] = sort(dist);
-        % close_id = idx(1);
-        for i = 1: length(idx)
-            if size(lower_trg{idx(i)}, 1) > 500
-                close_id = idx(i);
-                break
-            end
-        end
-
-        close_optxu = archive_xu(close_id, :);
-        close_optxl =  lower_xl(close_id, :);
-        [match_xl,~, history, output] = lowerlevel_fmincon(close_optxl, maxFE, prob.xl_bl, prob.xl_bu, funh_obj, funh_con);
+if ~isempty(archive_xu) && seeding_only % first generation on the upper level use global search
+    % ideal_xl = prob.get_xlprime(xu);
+    maxFE = 1000; % maxFE for local search
+    
+    if seeding_strategy == 1 % closest landscape
+        [~, idx]= pdist2(archive_xu, xu, 'euclidean', 'Smallest', 1);  % this xu is upper level new infill xu, not added into archive_xu
+        close_optxl =  archive_xl(idx, :);
+        [match_xl, ~, history, output] = lowerlevel_fmincon(close_optxl, maxFE, prob.xl_bl, prob.xl_bu, funh_obj, funh_con);
         
-        lower_eval = lower_eval + output.funcCount;
-        [match_fl, match_cl] = prob.evaluate_l(xu, match_xl);         % additional lazy step, can be extracted from local search results        
+        lower_eval = lower_eval + output.funcCount;     
         trgdata = [history.x, history.fval];
         return;
     end
     
-    if seeding_strategy == 2 % cokrging   
-        [expensive_x, cheap_x, cheap_f, correlation, close_optxu, close_optxl, global_xl, global_fl, sigma] = cokrg_trainingExtraction(xu, archive_xu, lower_trg, prob, global_halfsize, lower_xl, global_halfflag);
-        % A repeat but have to have it step
-        dist = pdist2(xu, archive_xu);                                 % this xu is upper level new infill xu, not added into archive_xu
-        [~, idx] = sort(dist);
-        
-        close_id = idx(1);
-        maxFE = maxFE - size(expensive_x, 1) + 1; 
-        
-        % expensive x went through distance check
-        [match_xl, lower_eval, ~, trgdata, co_mdl, cokrg_xl,  cokrg_lb, cokrg_ub, expensive_x] = cokrg_localsearch(xu, prob, close_optxu, close_optxl, expensive_x, ...
-            lower_trg, cheap_x, cheap_f, lower_eval, [], global_xl, global_fl, close_id, maxFE, sigma);
-        
-        if  ~hitoptimal_check2(xu, match_xl, prob)
-            nex = size(expensive_x, 1);
-            expensive_f = prob.evaluate_l(repmat(xu, nex, 1), expensive_x);
-            plot2d_withCokring(xu, prob.xl_bl, prob.xl_bu, match_xl, close_optxl, prob, close_optxu, co_mdl, cokrg_xl,...
-                            cheap_x,cheap_f, expensive_x, expensive_f, []);
-        end
-        [match_fl, match_cl] = prob.evaluate_l(xu, match_xl);                  % additional lazy step, can be extracted from local search results
-    end    
-    
-    if seeding_strategy == 3                                                   % random
-        rand_xl  = lhsdesign(1, prob.n_lvar, 'criterion','maximin','iterations',1000);
-        rand_xl  = repmat(prob.xl_bl, 1, 1) ...
-            + repmat((prob.xl_bu - prob.xl_bl), 1, 1) .* rand_xl;
-        
-        [match_xl,~, history, output] = lowerlevel_fmincon(rand_xl, maxFE, prob.xl_bl, prob.xl_bu, funh_obj, funh_con);        
-        lower_eval = lower_eval + output.funcCount;
-        [match_fl, match_cl] = prob.evaluate_l(xu, match_xl);                  % additional lazy step, can be extracted from local search results
-        trgdata = [history.x, history.fval];
-    end
-    
-    if seeding_strategy == 4
+       
+
+    if seeding_strategy == 2 % test neighbour
         % this method investigates a different sampling strategy
         % assumption is that assume similar landscape, but moves, so it is
         % better sample solutions that has certain distance from neighbour
         % optimal
-        [expensive_x, cheap_x, cheap_f, correlation, close_optxu, close_optxl, global_xl, global_fl, sigma, close_id] = cokrg_trainingSampleExtension(xu, archive_xu, lower_trg, prob, global_halfsize, lower_xl);
+        [expensive_x, cheap_x, cheap_f, correlation, close_optxu, close_optxl, global_xl, global_fl, sigma, close_id] = ...
+            cokrg_trainingSampleExtension(xu, archive_xu, lower_trg, prob, cokrg_samplesize, archive_xl);
         
         if correlation > 0.8
             % expensive x went through distance check
@@ -141,12 +82,6 @@ if ~isempty(archive_xu) && seeding_only                              % first gen
             
             nx = size(expensive_x, 1);
             expensive_f = prob.evaluate_l(repmat(xu, nx, 1), expensive_x);
-            
-            if ~hitoptimal_check2(xu, match_xl, prob)
-                plot2d_withCokring(xu, prob.xl_bl, prob.xl_bu, match_xl, close_optxl, prob, close_optxu, co_mdl,  cokrg_xl, ...
-                    cheap_x, cheap_f, expensive_x, expensive_f);
-            end
-
             return;
         else
             initmatrix = expensive_x;
@@ -166,7 +101,7 @@ if decision_making                                                         % if 
         % only use xu distance to determine similar landscape
         if xudistance_decision
             
-            [expensive_x, cheap_x, cheap_f, correlation, close_optxu, close_optxl, global_xl, global_fl] = cokrg_trainingExtraction(xu, archive_xu, lower_trg, prob, global_halfsize, lower_xl, global_halfflag);                
+            [expensive_x, cheap_x, cheap_f, correlation, close_optxu, close_optxl, global_xl, global_fl] = cokrg_trainingExtraction(xu, archive_xu, lower_trg, prob, global_halfsize, archive_xl, global_halfflag);                
             % a repeat but have to have it step
             dist = pdist2(xu, archive_xu);                                 % this xu is upper level new infill xu, not added into archive_xu
             [~, idx] = sort(dist);
