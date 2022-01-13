@@ -9,12 +9,10 @@ function[match_xl, mdl, trgdata] = llmatch_trueEvaluation(upper_xu, prob, xl_pro
 p = inputParser;
 addRequired(p, 'upper_xu');
 addRequired(p, 'prob');
-addRequired(p, 'xl_probe');
 addParameter(p, 'visualization', false);
 addParameter(p, 'seeding_only', false);  % conduct seeding controller
 addParameter(p, 'archive_xu', []);  % upper level all evaluated xu
 addParameter(p, 'archive_xl', []);  % lower level matching xl, might larger than xu due to asynsic update
-addParameter(p, 'decision_making', true); % if this variable is set to false, means lower level is global search
 addParameter(p, 'seeding_strategy', 1); % 1 nearest neighbour 2 cokrging starting
 parse(p, upper_xu, prob, xl_probe, varargin{:});
 % -----------------------------------
@@ -22,20 +20,15 @@ parse(p, upper_xu, prob, xl_probe, varargin{:});
 xu = p.Results.upper_xu;
 visualization = p.Results.visualization;
 seeding_only = p.Results.seeding_only;
-lower_archive_xu =p.Results.lower_archive_xu;
 archive_xu = p.Results.archive_xu;
-init_size = p.Results.init_size;
-xl_probe = p.Results.xl_probe;
-prob = p.Results.prob;
 archive_xl = p.Results.archive_xl;
-decision_making = p.Results.decision_making;
+prob = p.Results.prob;
 seeding_strategy = p.Results.seeding_strategy;
 %------------------------------------------------
 
 global lower_eval
-global lowerlocal_record
 global lower_trg
-global lowerlocal_recordWhichoptimal
+
 
 %-------------------------------------------------
 
@@ -49,7 +42,6 @@ funh_con = @(x)constraint_func(prob, xu, x);
 
 
 %-- lower level initialization
-global_halfsize = 10;
 % include seeding xl
 if ~isempty(archive_xu) && seeding_only % first generation on the upper level use global search
     % ideal_xl = prob.get_xlprime(xu);
@@ -67,69 +59,41 @@ if ~isempty(archive_xu) && seeding_only % first generation on the upper level us
     
        
 
-    if seeding_strategy == 2 % test neighbour
-        % this method investigates a different sampling strategy
-        % assumption is that assume similar landscape, but moves, so it is
-        % better sample solutions that has certain distance from neighbour
-        % optimal
-        [expensive_x, cheap_x, cheap_f, correlation, close_optxu, close_optxl, global_xl, global_fl, sigma, close_id] = ...
-            cokrg_trainingSampleExtension(xu, archive_xu, lower_trg, prob, cokrg_samplesize, archive_xl);
+    if seeding_strategy == 2    % test neighbour
+        % this method use cokriging sample to determine a starting point
+        % and local search
+        % cokriging sample both consider in std and outside std
+        [expensive_x, expensive_f, cheap_x, cheap_f, correlation] = ...
+            cokrg_trainingSampleExtension(xu, prob, archive_xu, archive_xl,  lower_trg, cokrg_samplesize);
+        
+        [neighbour_optxu, neighbour_optxl, ~] = retrieve_neighbour(xu, lower_trg, archive_xu, archive_xl);
+        neighbour_optfl = prob.evaluate_l(neighbour_optxu, neighbour_optxl);
+        current_fl = prob.evaluate_l(xu, neighbour_optxl);
+        
+        cokrg_trg.expensive_x = [expensive_x; neighbour_optxl];
+        cokrg_trg.expensive_f = [expensive_f; current_fl];
+        cokrg_trg.cheap_x = [cheap_x; neighbour_optxl];
+        cokrg_trg.cheap_f = [cheap_f; neighbour_optfl];
         
         if correlation > 0.8
             % expensive x went through distance check
-            [match_xl, lower_eval, ~, trgdata, co_mdl, cokrg_xl,  cokrg_lb, cokrg_ub, expensive_x] = cokrg_localsearch(xu, prob, close_optxu, close_optxl, expensive_x, ...
-                lower_trg, cheap_x, cheap_f, lower_eval, [], global_xl, global_fl, close_id, maxFE, sigma);   
+            maxFE = maxFE - size(cokrg_trg.expensive_x, 1);
+            [match_xl, lower_eval, trgdata, landonbound] = cokrg_localsearch(xu, prob, cokrg_trg, lower_eval, maxFE);   
             
-            nx = size(expensive_x, 1);
-            expensive_f = prob.evaluate_l(repmat(xu, nx, 1), expensive_x);
-            return;
+            % if cokrging propose a point on boundary
+            if landonbound
+                %  lower_eval has counted the match_xl in cokrg_localsearch
+                %  method
+                initmatrix = [cokrg_trg.expensive_x; match_xl];
+                % algorithm will continue to ea search part
+            else
+                return;
+            end
         else
-            initmatrix = expensive_x;
+            initmatrix = cokrg_trg.expensive_x;
         end
     end
     
-end
-
-
-xudistance_decision = true;
-visual_local = false;
-
-
-if decision_making                                                         % if decision_making is set false, means that global search
-    if ~isempty(lower_archive_xu) && ~isempty(archive_xu)                  % when archive_xu is passed in, means can do closeness check
-
-        % only use xu distance to determine similar landscape
-        if xudistance_decision
-            
-            [expensive_x, cheap_x, cheap_f, correlation, close_optxu, close_optxl, global_xl, global_fl] = cokrg_trainingExtraction(xu, archive_xu, lower_trg, prob, global_halfsize, archive_xl, global_halfflag);                
-            % a repeat but have to have it step
-            dist = pdist2(xu, archive_xu);                                 % this xu is upper level new infill xu, not added into archive_xu
-            [~, idx] = sort(dist);
-            
-            for i = 1: length(idx)
-                if size(lower_trg{idx(i)}, 1) > 500
-                    close_id = idx(i);
-                    break
-                end
-            end
-            %
-            if correlation > 0.6 % turn to local search
-                [match_xl, lower_eval, lowerlocal_record, trgdata] = cokrg_localsearch(xu, prob, close_optxu, close_optxl, expensive_x, ...
-                    lower_trg, cheap_x, cheap_f, lower_eval, lowerlocal_record, global_xl, global_fl, close_id);
- 
-                if visual_local
-                    plot2d_withCokring(xu, prob.xl_bl, prob.xl_bu, match_xl, close_optxl, prob, close_optxu, co_mdl,  close_optxlcokring, ...
-                        cheap_x, cheap_f, expensive_x, expensive_f);
-                    
-                end
-                return;
-            else
-                fprintf('Roll back to global search \n');
-                initmatrix = [expensive_x; global_xl];
-            end
-        end
-        
-    end
 end
 
 
@@ -145,31 +109,13 @@ param.popsize = 50;
 lb = prob.xl_bl;
 ub = prob.xl_bu;
 num_xvar = prob.n_lvar;
-% initmatrix = [];
+% initmatrix is set early in this method;
 
-[best_x, best_f, best_c, archive_xu, ~] = gsolver(funh_obj, num_xvar, lb, ub, initmatrix, funh_con, param, 'visualize', false);
-s = 1;
-
-lower_eval = lower_eval + (param.gen + 1) * param.popsize - size(initmatrix, 1); % because before similarity, there is an adding evaluation step
+[best_x, best_f, best_c, archive_search, ~] = gsolver(funh_obj, num_xvar, lb, ub, initmatrix, funh_con, param, 'visualize', false);
+lower_eval = lower_eval + (param.gen + 1) * param.popsize - size(initmatrix, 1); 
 
 match_xl = best_x;
-
-if ~hitoptimal_check(xu, match_xl, prob)
-    lowerlocal_record = [lowerlocal_record; 0]; % local search fail  
-    lowerlocal_recordWhichoptimal = [lowerlocal_recordWhichoptimal; checkwhich_localoptimal(xu, match_xl, prob)];
-    %  1 forward and backward   
-    %  3 left and right
-     
-else
-    lowerlocal_record = [lowerlocal_record; 1];         % local search success
-    lowerlocal_recordWhichoptimal = [lowerlocal_recordWhichoptimal; 0];
-end
-    
-
-aftersearch_collectx = archive_xu.sols(:, 2: prob.n_lvar + 1);
-aftersearch_collectf = archive_xu.sols(:, prob.n_lvar + 2: end);  % only considers one objective
-% add ons
-trgdata = [aftersearch_collectx, aftersearch_collectf];
+trgdata = [archive_search.sols(:, 2: prob.n_lvar + 1), archive_search.sols(:, prob.n_lvar + 2: end)];
 
 end
 
