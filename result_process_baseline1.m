@@ -1,14 +1,18 @@
 % generate accuracy analysis
+problem_folder = strcat(pwd,'/problems/TP3');
+addpath(problem_folder);
+
+
+
 
 problems = { 'smd1mp(1, 2, 1)' , 'smd2mp(1, 2, 1)',  'smd3mp(1, 2, 1)',  'smd4mp(1, 2, 1)', ....
     'smd5mp(1, 2, 1)' , 'smd6mp(1, 0, 2, 1)', 'smd7mp(1, 2, 1)',  'smd8mp(1, 2, 1)'};
 
-
 % problems = { 'smd1mp(1, 1, 1)' , 'smd2mp(1, 1, 1)',  'smd3mp(1, 1, 1)',  'smd4mp(1, 1, 1)', ....
 %      'smd5mp(1, 1, 1)' , 'smd6mp(1, 0, 1, 1)', 'smd7mp(1, 1, 1)',  'smd8mp(1, 1, 1)'};
 
-problems = {'smd1mp(1, 1, 1)'};
-method = {'_baseline', '0', '1',  '_cokrg'};
+% problems = {'smd1mp(1, 1, 1)'};
+method = {'_baseline_ea', '_seeding_strategy_1', '_seeding_strategy_2'};
 prob_test = eval(problems{1});
 nv = prob_test.n_lvar;
 
@@ -17,19 +21,41 @@ resultfolder = fullfile(pwd, foldername);
 
 
 np = length(problems);
-seed = 29;
-mseed = 15;
+seed = 21;
+mseed = 11;
 sigTestIndex = 4;  % refer to the newest algorithm which is 4 in this case 
 
 
 accuracy_extraction(problems, method, resultfolder, np, seed, mseed, sigTestIndex);
 % accuracy_extractionExtension(problems, method, resultfolder, np, seed, mseed, sigTestIndex);
-% FE_analysis(problems, method, resultfolder, np, seed, mseed, sigTestIndex) 
+FE_analysis(problems, method, resultfolder, np, seed, mseed, sigTestIndex) ;
+
+problems = { 'smd1mp(1, 1, 1)' , 'smd2mp(1, 1, 1)',  'smd3mp(1, 1, 1)',  'smd4mp(1, 1, 1)', ....
+     'smd5mp(1, 1, 1)' , 'smd6mp(1, 0, 1, 1)', 'smd7mp(1, 1, 1)',  'smd8mp(1, 1, 1)'};
+
+% problems = {'smd1mp(1, 1, 1)'};
+method = {'_baseline_ea', '_seeding_strategy_1', '_seeding_strategy_2'};
+prob_test = eval(problems{1});
+nv = prob_test.n_lvar;
+
+foldername = strcat('resultfolder_trueEval', num2str(nv));
+resultfolder = fullfile(pwd, foldername);
+
+
+np = length(problems);
+seed = 21;
+mseed = 11;
+sigTestIndex = 4;  % refer to the newest algorithm which is 4 in this case 
+
+
+accuracy_extraction(problems, method, resultfolder, np, seed, mseed, sigTestIndex);
+% accuracy_extractionExtension(problems, method, resultfolder, np, seed, mseed, sigTestIndex);
+FE_analysis(problems, method, resultfolder, np, seed, mseed, sigTestIndex) 
 
 
 % success rate
-method = {'0', '1', '_cokrg'};
-lowerSuccessRate(problems, method, resultfolder, np, seed, mseed);
+% method = {'0', '1', '_cokrg'};
+% lowerSuccessRate(problems, method, resultfolder, np, seed, mseed);
 % lowerSuccessRateExtension(problems, method, resultfolder, np, seed, mseed);
 
 
@@ -306,7 +332,7 @@ end
 
 filename = strcat('median_accuracy_latex_nlvar_', num2str(prob.n_lvar),'.csv');
 fp = fopen(filename, 'w');
-fprintf(fp, 'problems,  baseline, _, transfer to local search, _, transfer to local search +, _, decision making, _,  compare-0, compare-1\n');
+fprintf(fp, 'problems,  baseline,  , transfer from neighbour optimal, , transfer from cokrg, \n');
 
 for i = 1:np
     prob = eval(problems{i});
@@ -322,8 +348,8 @@ for i = 1:np
         if j == sigTestIndex  % accuracy smaller the better
             % 1 means  the former is smaller,  second is bigger/better, 
             % for hv comparison larger the better
-            [p1,h1,stats1] = ranksum( method_results1{j}(i, :), method_results1{j-2}(i, :),  'alpha', 0.05, 'tail', 'left');      
-            [p2,h2,stats2] = ranksum( method_results1{j-2}(i, :), method_results1{j}(i, :),  'alpha', 0.05, 'tail', 'left');    
+            [p1, h1, stats1] = ranksum( method_results1{j}(i, :), method_results1{j-2}(i, :),  'alpha', 0.05, 'tail', 'left');      
+            [p2, h2, stats2] = ranksum( method_results1{j-2}(i, :), method_results1{j}(i, :),  'alpha', 0.05, 'tail', 'left');    
             if h1 == 1 && h2 == 0               
                 fprintf(fp, '$\\uparrow_{3}$ , ');               
             elseif h2==1 && h1 == 0
@@ -352,69 +378,69 @@ fclose(fp);
 
 
 % normalized accuracy 
-
-norm_up = [];
-norm_down = [];
-for i = 1:nm
-   norm_up = [norm_up; method_results1{i}];
-   norm_down = [norm_down; method_results2{i}];
-end
-norm_up = (norm_up - min(norm_up(:)))/(max(norm_up(:)) - min(norm_up(:)));
-norm_down = (norm_down - min(norm_down(:)))/(max(norm_down(:)) - min(norm_down(:)));
-norm_accuracy = norm_up + norm_down;
-
-method_normResults = {};
-
-for i = 1:nm
-    method_normResults{i} = norm_accuracy((i-1)*np + 1: i*np, :);
-end
-
-filename = strcat('median_accuracy_Normlatex_', num2str(prob.n_lvar),'.csv');
-
-fp = fopen(filename, 'w');
-fprintf(fp, 'problems,  baseline, transfer to local search, transfer to local search +, decision making,  compare-0, compare-1\n');
-
-for i = 1:np
-    prob = eval(problems{i});
-    fprintf(fp, '%s &,', prob.name);
-    
-    for j = 1:nm
-        
-        [~, id] = sort(method_normResults{j}(i, :));
-        nx = id(mseed);
-        fprintf(fp, '%0.4f & , ', method_normResults{j}(i, nx));
-       
-        if j == sigTestIndex %
-            % 1 means  the former is smaller,  second is bigger/better, 
-            % for hv comparison larger the better
-            [p1,h1,stats1] = ranksum( method_results1{j}(i, :), method_results1{j-2}(i, :),  'alpha', 0.05, 'tail', 'left');      
-            [p2,h2,stats2] = ranksum( method_results1{j-2}(i, :), method_results1{j}(i, :),  'alpha', 0.05, 'tail', 'left');    
-            if h1 == 1 && h2 == 0               
-                fprintf(fp, '$\\uparrow_{3}$,');               
-            elseif h2==1 && h1 == 0
-                fprintf(fp, '$\\downarrow_{3}$,');
-            else
-                fprintf(fp, '$\\approx_{3}$,');
-            end
-            
-             % 1 means  the former is smaller,  second is bigger/better, 
-            % for hv comparison larger the better
-            [p1,h1,stats1] = ranksum( method_results1{j}(i, :), method_results1{j-1}(i, :),  'alpha', 0.05, 'tail', 'left');      
-            [p2,h2,stats2] = ranksum( method_results1{j-1}(i, :), method_results1{j}(i, :),  'alpha', 0.05, 'tail', 'left');    
-            if h1 == 1 && h2 == 0               
-                fprintf(fp, '$\\uparrow_{4}$');               
-            elseif h2==1 && h1 == 0
-                fprintf(fp, '$\\downarrow_{4}$');
-            else
-                fprintf(fp, '$\\approx_{4}$');
-            end
-        end
-    end
-    fprintf(fp, '\\\\\n');
-
-end
-fclose(fp);
-
+% 
+% norm_up = [];
+% norm_down = [];
+% for i = 1:nm
+%    norm_up = [norm_up; method_results1{i}];
+%    norm_down = [norm_down; method_results2{i}];
+% end
+% norm_up = (norm_up - min(norm_up(:)))/(max(norm_up(:)) - min(norm_up(:)));
+% norm_down = (norm_down - min(norm_down(:)))/(max(norm_down(:)) - min(norm_down(:)));
+% norm_accuracy = norm_up + norm_down;
+% 
+% method_normResults = {};
+% 
+% for i = 1:nm
+%     method_normResults{i} = norm_accuracy((i-1)*np + 1: i*np, :);
+% end
+% 
+% filename = strcat('median_accuracy_Normlatex_', num2str(prob.n_lvar),'.csv');
+% 
+% fp = fopen(filename, 'w');
+% fprintf(fp, 'problems,  baseline, transfer to local search, transfer to local search +, decision making,  compare-0, compare-1\n');
+% 
+% for i = 1:np
+%     prob = eval(problems{i});
+%     fprintf(fp, '%s &,', prob.name);
+%     
+%     for j = 1:nm
+%         
+%         [~, id] = sort(method_normResults{j}(i, :));
+%         nx = id(mseed);
+%         fprintf(fp, '%0.4f & , ', method_normResults{j}(i, nx));
+%        
+%         if j == sigTestIndex %
+%             1 means  the former is smaller,  second is bigger/better, 
+%             for hv comparison larger the better
+%             [p1,h1,stats1] = ranksum( method_results1{j}(i, :), method_results1{j-2}(i, :),  'alpha', 0.05, 'tail', 'left');      
+%             [p2,h2,stats2] = ranksum( method_results1{j-2}(i, :), method_results1{j}(i, :),  'alpha', 0.05, 'tail', 'left');    
+%             if h1 == 1 && h2 == 0               
+%                 fprintf(fp, '$\\uparrow_{3}$,');               
+%             elseif h2==1 && h1 == 0
+%                 fprintf(fp, '$\\downarrow_{3}$,');
+%             else
+%                 fprintf(fp, '$\\approx_{3}$,');
+%             end
+%             
+%              1 means  the former is smaller,  second is bigger/better, 
+%             for hv comparison larger the better
+%             [p1,h1,stats1] = ranksum( method_results1{j}(i, :), method_results1{j-1}(i, :),  'alpha', 0.05, 'tail', 'left');      
+%             [p2,h2,stats2] = ranksum( method_results1{j-1}(i, :), method_results1{j}(i, :),  'alpha', 0.05, 'tail', 'left');    
+%             if h1 == 1 && h2 == 0               
+%                 fprintf(fp, '$\\uparrow_{4}$');               
+%             elseif h2==1 && h1 == 0
+%                 fprintf(fp, '$\\downarrow_{4}$');
+%             else
+%                 fprintf(fp, '$\\approx_{4}$');
+%             end
+%         end
+%     end
+%     fprintf(fp, '\\\\\n');
+% 
+% end
+% fclose(fp);
+% 
 
 
 end

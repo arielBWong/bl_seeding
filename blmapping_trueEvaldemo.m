@@ -5,8 +5,6 @@ function blmapping_trueEvaldemo(problem_str, seed, varargin)
 p = inputParser;
 addRequired(p,'problem_str');
 addRequired(p,'seed');
-addParameter(p,'decision_making', true);
-addParameter(p,'restart_num', 0);
 addParameter(p,'use_seeding', false);
 addParameter(p,'seeding_strategy', 1);
 parse(p, problem_str, seed, varargin{:});
@@ -15,8 +13,6 @@ parse(p, problem_str, seed, varargin{:});
 prob_str = p.Results.problem_str;
 seed = p.Results.seed;
 use_seeding = p.Results.use_seeding;
-rn = p.Results.restart_num;
-decision_making = p.Results.decision_making;
 seeding_strategy = p.Results.seeding_strategy;
 %---
 
@@ -43,7 +39,7 @@ xl_probe = repmat(prob.xl_bl, inisize_l, 1) ...
 funh_external = @(pop)up_probrecord(pop,  xl_probe, prob);
 
 
-funh_obj  =  @(x)up_objective_func(prob, x, xl_probe, use_seeding, decision_making, seeding_strategy);
+funh_obj  =  @(x)up_objective_func(prob, x, use_seeding, seeding_strategy);
 funh_con  =  @(x)up_constraint_func(prob, x);
 
 param.gen = 9;
@@ -54,13 +50,8 @@ num_xvar = prob.n_uvar;
 initmatrix = [];
 
 global upper_xu  % upper archive 
-global xu_probefl
 global lower_xl   % lower archive
 global lower_eval
-global lowerlocal_record
-global lowerlocalsuccess_record2
-global lowerlocal_recordWhichoptimal
-global lowerlocal_recordHitboundary
 global lower_mdl
 global lower_trg
 global g
@@ -69,12 +60,8 @@ g = 1;
 
 upper_xu = [];
 lower_xl = [];
-xu_probefl = [];
+
 lower_eval = 0;
-lowerlocal_record = [];
-lowerlocalsuccess_record2 = [];
-lowerlocal_recordWhichoptimal = [];
-lowerlocal_recordHitboundary = [];
 lower_mdl = {};
 lower_trg ={};
 gpr_mdl = [];
@@ -82,16 +69,14 @@ gpr_mdl = [];
 
 [best_x, ~, ~, a, ~] = gsolver(funh_obj, num_xvar, lb, ub, initmatrix, funh_con, param,  'externalfunction', funh_external,  'visualize', false);
 
-% obj.close();
-save_results(upper_xu, lower_xl, prob,  seed, use_seeding, rn, lower_eval, lowerlocal_record, decision_making, seeding_strategy, lowerlocalsuccess_record2, lowerlocal_recordWhichoptimal);
 
+save_results(upper_xu, lower_xl, prob,  seed, use_seeding, lower_eval, seeding_strategy);
 end
 
 function out = up_probrecord(pop, xl_probe, prob)
 % re-do one more round of initialization
 %
 
-global xu_probefl
 global upper_xu
 global lower_xl
 global lower_mdl
@@ -103,20 +88,11 @@ lower_xl = [lower_xl; pop.A];
 lower_mdl = [lower_mdl, pop.Mdl];
 lower_trg = [lower_trg, pop.trgdata];
 
-n = size(xl_probe, 1);
-m = size(pop.X, 1);
-
-
-for i =1:m
-    xui = repmat(pop.X(i, :), n, 1);
-    fl_probe = prob.evaluate_l(xui, xl_probe);
-    xu_probefl = [xu_probefl; fl_probe'];   % this is only used for decision making scheme
-end
 out = [];
 end
 
 
-function [output] =  up_objective_func(prob, xu, xl_probe, use_seeding,  decision_making, seeding_strategy)
+function [output] =  up_objective_func(prob, xu, use_seeding, seeding_strategy)
 
 global upper_xu
 global lower_xl
@@ -137,11 +113,11 @@ for i = 1:m
     fprintf('gen %d, ind %d \n ', g, i);
     xui = xu(i, :);
     
-    [match_xl, mdl, trgdata] = llmatch_trueEvaluation(xui, prob,  xl_probe, ...
-        'archive', upper_xu, 'archive_xl', lower_xl,...
-        'seeding_only', use_seeding, 'decision_making', decision_making,...
-        'seeding_strategy', seeding_strategy, ...
+    [match_xl, mdl, trgdata] = llmatch_trueEvaluation(xui, prob, ...
+        'archive_xu', upper_xu, 'archive_xl', lower_xl,...
+        'seeding_only', use_seeding,  'seeding_strategy', seeding_strategy, ...
         'visualization', vis);
+    
     fi = prob.evaluate_u(xui, match_xl);
     
     xl = [xl; match_xl];
@@ -164,7 +140,10 @@ function c = up_constraint_func(prob, xu)
 c = [];
 end
 
-function  save_results(xu, xl, prob, seed, use_seeding, rx, lower_eval, lowerlocal_record, decision_making, seeding_strategy, lowerlocalsuccess_record2, lowerlocal_recordWhichoptimal)
+
+
+
+function  save_results(xu, xl, prob, seed, use_seeding,  lower_eval,seeding_strategy)
 
 [fu, cu] = prob.evaluate_u(xu, xl);   % lazy  step
 [fl, cl] = prob.evaluate_l(xu, xl);
@@ -177,14 +156,9 @@ if n ~= 7
 end
 
 if use_seeding
-    foldername = strcat(prob.name, '_seeding_', num2str(seeding_strategy));
-    foldername = strcat(foldername, '_rand_', num2str(rx));
-else
-    if decision_making
-        foldername = strcat(prob.name, '_cokrg');
-    else
-        foldername = strcat(prob.name, '_baseline');
-    end
+    foldername = strcat(prob.name, '_seeding_strategy_', num2str(seeding_strategy));
+else    
+    foldername = strcat(prob.name, '_baseline_ea');
 end
 
 resultfolder = fullfile(resultfolder, foldername);
@@ -209,31 +183,11 @@ filename = strcat('fl_seed_', num2str(seed), '.csv');
 savename = fullfile(resultfolder, filename);
 csvwrite(savename, fl);
 
-filename = strcat('cu_seed_', num2str(seed), '.csv');
-savename = fullfile(resultfolder, filename);
-csvwrite(savename, cu);
-
-filename = strcat('cl_seed_', num2str(seed), '.csv');
-savename = fullfile(resultfolder, filename);
-csvwrite(savename, cl);
 
 filename = strcat('lowerlevelcount_seed_', num2str(seed), '.csv');
 savename = fullfile(resultfolder, filename);
 csvwrite(savename, lower_eval);
 
-filename = strcat('lower_success_seed_', num2str(seed), '.csv');
-savename = fullfile(resultfolder, filename);
-csvwrite(savename, lowerlocal_record);
-
-filename = strcat('lower_WhichLocalOptimal_seed_', num2str(seed), '.csv');
-savename = fullfile(resultfolder, filename);
-csvwrite(savename, lowerlocal_recordWhichoptimal);
-
-if ~isempty(lowerlocalsuccess_record2)
-    filename = strcat('lower_success2_seed_', num2str(seed), '.csv');
-    savename = fullfile(resultfolder, filename);
-    csvwrite(savename, lowerlocalsuccess_record2);
-end
 
 if size(fu, 2) > 1
     % fu nd front
