@@ -3,10 +3,10 @@ function blmapping_trueEvaldemo(problem_str, seed, varargin)
 %
 % parse input
 p = inputParser;
-addRequired(p,'problem_str');
-addRequired(p,'seed');
-addParameter(p,'use_seeding', false);
-addParameter(p,'seeding_strategy', 1);
+addRequired(p, 'problem_str');
+addRequired(p, 'seed');
+addParameter(p, 'use_seeding', false);
+addParameter(p, 'seeding_strategy', 1);
 parse(p, problem_str, seed, varargin{:});
 
 %--- assign input parameters
@@ -19,9 +19,9 @@ seeding_strategy = p.Results.seeding_strategy;
 visualize = false;
 if visualize
     fighn  = figure('Position', [100 100 800 800]);
-    h1     = subplot(2, 2, 1);
-    h2     = subplot(2, 2, 3);
-    h3     = subplot(2, 2, 4);
+    h1 = subplot(2, 2, 1);
+    h2 = subplot(2, 2, 3);
+    h3 = subplot(2, 2, 4);
 end
 
 rng(seed, 'twister');
@@ -37,8 +37,6 @@ xl_probe = repmat(prob.xl_bl, inisize_l, 1) ...
     + repmat((prob.xl_bu - prob.xl_bl), inisize_l, 1) .* xl_probe;
 
 funh_external = @(pop)up_probrecord(pop,  xl_probe, prob);
-
-
 funh_obj  =  @(x)up_objective_func(prob, x, use_seeding, seeding_strategy);
 funh_con  =  @(x)up_constraint_func(prob, x);
 
@@ -54,8 +52,8 @@ global lower_xl   % lower archive
 global lower_eval
 global lower_mdl
 global lower_trg
+global lower_decisionSwitch
 global g
-global gpr_mdl
 g = 1;
 
 upper_xu = [];
@@ -64,18 +62,16 @@ lower_xl = [];
 lower_eval = 0;
 lower_mdl = {};
 lower_trg ={};
-gpr_mdl = [];
-
+lower_decisionSwitch = zeros(param.gen, param.popsize);
 
 [best_x, ~, ~, a, ~] = gsolver(funh_obj, num_xvar, lb, ub, initmatrix, funh_con, param,  'externalfunction', funh_external,  'visualize', false);
+save_results(upper_xu, lower_xl, prob,  seed, use_seeding, lower_eval, seeding_strategy, lower_decisionSwitch);
 
-
-save_results(upper_xu, lower_xl, prob,  seed, use_seeding, lower_eval, seeding_strategy);
 end
 
 function out = up_probrecord(pop, xl_probe, prob)
 % re-do one more round of initialization
-%
+% 
 
 global upper_xu
 global lower_xl
@@ -91,12 +87,12 @@ lower_trg = [lower_trg, pop.trgdata];
 out = [];
 end
 
-
 function [output] =  up_objective_func(prob, xu, use_seeding, seeding_strategy)
 
 global upper_xu
 global lower_xl
 global g
+global lower_decisionSwitch
 % upper xu and lower level does not change at the same time,
 % upper_xu changes in generation wise, lower_xl changes in each xu's
 % evaluation step. they should eventually have the same size.
@@ -105,6 +101,7 @@ global g
 m = size(xu, 1);
 f = [];
 xl = [];
+lower_searchSwitchFlags = [];
 mdls = {};
 trgdatas = {};
 
@@ -113,7 +110,7 @@ for i = 1:m
     fprintf('gen %d, ind %d \n ', g, i);
     xui = xu(i, :);
     
-    [match_xl, mdl, trgdata] = llmatch_trueEvaluation(xui, prob, ...
+    [match_xl, mdl, trgdata, lower_searchSwitchFlag] = llmatch_trueEvaluation(xui, prob, ...
         'archive_xu', upper_xu, 'archive_xl', lower_xl,...
         'seeding_only', use_seeding,  'seeding_strategy', seeding_strategy, ...
         'visualization', vis);
@@ -124,9 +121,11 @@ for i = 1:m
     f = [f; fi];
     mdls{end+1} = mdl;
     trgdatas{end+1} = trgdata;
+    lower_searchSwitchFlags = [lower_searchSwitchFlags, lower_searchSwitchFlag];
 end
 
 fprintf('\n');
+lower_decisionSwitch(g, :) = lower_searchSwitchFlags;
 g = g + 1;
 
 output.f = f;
@@ -135,15 +134,12 @@ output.mdl = mdls;
 output.trgdata = trgdatas;
 end
 
-
 function c = up_constraint_func(prob, xu)
 c = [];
 end
 
 
-
-
-function  save_results(xu, xl, prob, seed, use_seeding,  lower_eval,seeding_strategy)
+function  save_results(xu, xl, prob, seed, use_seeding,  lower_eval,seeding_strategy, lower_decisionSwitch)
 
 [fu, cu] = prob.evaluate_u(xu, xl);   % lazy  step
 [fl, cl] = prob.evaluate_l(xu, xl);
@@ -188,6 +184,9 @@ filename = strcat('lowerlevelcount_seed_', num2str(seed), '.csv');
 savename = fullfile(resultfolder, filename);
 csvwrite(savename, lower_eval);
 
+filename = strcat('lowerlevelswitch_seed_',  num2str(seed), '.mat');
+savename = fullfile(resultfolder, filename);
+save(savename,  'lower_decisionSwitch');
 
 if size(fu, 2) > 1
     % fu nd front

@@ -2,9 +2,6 @@
 problem_folder = strcat(pwd,'/problems/TP3');
 addpath(problem_folder);
 
-
-
-
 problems = { 'smd1mp(1, 2, 1)' , 'smd2mp(1, 2, 1)',  'smd3mp(1, 2, 1)',  'smd4mp(1, 2, 1)', ....
     'smd5mp(1, 2, 1)' , 'smd6mp(1, 0, 2, 1)', 'smd7mp(1, 2, 1)',  'smd8mp(1, 2, 1)'};
 
@@ -12,7 +9,7 @@ problems = { 'smd1mp(1, 2, 1)' , 'smd2mp(1, 2, 1)',  'smd3mp(1, 2, 1)',  'smd4mp
 %      'smd5mp(1, 1, 1)' , 'smd6mp(1, 0, 1, 1)', 'smd7mp(1, 1, 1)',  'smd8mp(1, 1, 1)'};
 
 % problems = {'smd1mp(1, 1, 1)'};
-method = {'_baseline_ea', '_seeding_strategy_1', '_seeding_strategy_2'};
+methods = {'_baseline_ea', '_seeding_strategy_1', '_seeding_strategy_3'};
 prob_test = eval(problems{1});
 nv = prob_test.n_lvar;
 
@@ -25,10 +22,12 @@ seed = 21;
 mseed = 11;
 sigTestIndex = 4;  % refer to the newest algorithm which is 4 in this case 
 
+methods = { '_seeding_strategy_2', '_seeding_strategy_3'};
+switch_ratio(problems, methods, resultfolder, seed, mseed);
 
-accuracy_extraction(problems, method, resultfolder, np, seed, mseed, sigTestIndex);
+accuracy_extraction(problems, methods, resultfolder, np, seed, mseed, sigTestIndex);
 % accuracy_extractionExtension(problems, method, resultfolder, np, seed, mseed, sigTestIndex);
-FE_analysis(problems, method, resultfolder, np, seed, mseed, sigTestIndex) ;
+FE_analysis(problems, methods, resultfolder, np, seed, mseed, sigTestIndex) ;
 
 problems = { 'smd1mp(1, 1, 1)' , 'smd2mp(1, 1, 1)',  'smd3mp(1, 1, 1)',  'smd4mp(1, 1, 1)', ....
      'smd5mp(1, 1, 1)' , 'smd6mp(1, 0, 1, 1)', 'smd7mp(1, 1, 1)',  'smd8mp(1, 1, 1)'};
@@ -41,24 +40,79 @@ nv = prob_test.n_lvar;
 foldername = strcat('resultfolder_trueEval', num2str(nv));
 resultfolder = fullfile(pwd, foldername);
 
-
 np = length(problems);
 seed = 21;
 mseed = 11;
 sigTestIndex = 4;  % refer to the newest algorithm which is 4 in this case 
 
 
-accuracy_extraction(problems, method, resultfolder, np, seed, mseed, sigTestIndex);
+accuracy_extraction(problems, methods, resultfolder, np, seed, mseed, sigTestIndex);
 % accuracy_extractionExtension(problems, method, resultfolder, np, seed, mseed, sigTestIndex);
-FE_analysis(problems, method, resultfolder, np, seed, mseed, sigTestIndex) 
-
+FE_analysis(problems, methods, resultfolder, np, seed, mseed, sigTestIndex) 
 
 % success rate
 % method = {'0', '1', '_cokrg'};
 % lowerSuccessRate(problems, method, resultfolder, np, seed, mseed);
 % lowerSuccessRateExtension(problems, method, resultfolder, np, seed, mseed);
 
+function[] = switch_ratio(problems, methods, resultfolder, ns, median_ns)
+% This function calculates the ratio of switch to global search after
+% the first generation 
+% only work for strategy 2 and 3
+%----------
 
+np = length(problems);
+nm = length(methods);
+% cell(num_problems):  [num_seeds, num_methods]
+raw_switch = cell(1, np);
+% cell(num_problems):[1, num_methods];
+std_switch = cell(1, np);
+% cell(num_problems):  [1, num_methods];
+mean_switch = cell(1, np);
+
+
+for ip = 1:np
+    
+    prob = eval(problems{ip});
+    raw_switch_single = zeros(ns, nm);
+    
+    for is = 1:ns      
+        for im = 1:nm
+            foldername= fullfile(resultfolder, strcat(prob.name, methods{im}));
+            filename = fullfile(foldername, strcat('lowerlevelswitch_seed_', num2str(is), '.mat'));
+            load(filename);
+            % for variable lower_decisionSwitch 1 means that 
+            total_global = sum(lower_decisionSwitch(:));
+            raw_switch_single(is, im) = total_global;
+            clear lower_decisionSwitch;
+        end
+    end
+    
+    raw_switch{ip} = raw_switch_single;
+    std_switch{ip} = std(raw_switch_single, 1);
+    mean_switch{ip} = mean(raw_switch_single, 1);
+end
+
+% write into files
+filename = strcat('globalSwitch_mean_nvar_', num2str(prob.n_lvar),'.csv');
+fp = fopen(filename, 'w');
+fprintf(fp, 'problem/methods, ');
+for im = 1:nm
+    fprintf(fp,  '%s, ', methods{im});
+end
+fprintf(fp, '\n');
+
+for ip = 1:np
+    prob = eval(problems{ip});
+    fprintf(fp, '%s,',  prob.name);
+    for im = 1:nm
+        fprintf(fp, '%f, ',  floor(mean_switch{ip}(im)));
+    end
+    fprintf(fp, '\n');
+end
+fclose(fp);
+
+end
 
 function [] = lowerSuccessRate(problems, method, resultfolder, np, seed, mseed)
 

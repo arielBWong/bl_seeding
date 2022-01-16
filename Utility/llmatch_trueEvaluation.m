@@ -1,4 +1,4 @@
-function[match_xl, mdl, trgdata] = llmatch_trueEvaluation(upper_xu, prob, xl_probe, varargin)
+function[match_xl, mdl, trgdata, lower_searchSwitchFlag] = llmatch_trueEvaluation(upper_xu, prob, xl_probe, varargin)
 % method of searching for a match xl for xu.
 % Problem(Prob) definition require certain formation for bilevel problems
 % evaluation method should be of  form 'evaluation_l(xu, xl)'
@@ -26,10 +26,9 @@ prob = p.Results.prob;
 seeding_strategy = p.Results.seeding_strategy;
 %------------------------------------------------
 
+lower_searchSwitchFlag = 0;
 global lower_eval
 global lower_trg
-
-
 %-------------------------------------------------
 
 cokrg_samplesize = 20;
@@ -45,19 +44,18 @@ funh_con = @(x)constraint_func(prob, xu, x);
 % include seeding xl
 if ~isempty(archive_xu) && seeding_only % first generation on the upper level use global search
     % ideal_xl = prob.get_xlprime(xu);
-    maxFE = 1000; % maxFE for local search
+    maxFE = 1000;    % maxFE for local search
     
-    if seeding_strategy == 1 % closest landscape
+    if seeding_strategy == 1  % closest landscape
         [~, idx]= pdist2(archive_xu, xu, 'euclidean', 'Smallest', 1);  % this xu is upper level new infill xu, not added into archive_xu
         close_optxl =  archive_xl(idx, :);
         [match_xl, ~, history, output] = lowerlevel_fmincon(close_optxl, maxFE, prob.xl_bl, prob.xl_bu, funh_obj, funh_con);
         
         lower_eval = lower_eval + output.funcCount;     
         trgdata = [history.x, history.fval];
+        lower_searchSwitchFlag = 1;
         return;
-    end
-    
-       
+    end  
 
     if seeding_strategy == 2    % test neighbour
         % this method use cokriging sample to determine a starting point
@@ -87,12 +85,40 @@ if ~isempty(archive_xu) && seeding_only % first generation on the upper level us
                 initmatrix = [cokrg_trg.expensive_x; match_xl];
                 % algorithm will continue to ea search part
             else
+                lower_searchSwitchFlag = 1;
                 return;
             end
         else
             initmatrix = cokrg_trg.expensive_x;
         end
     end
+    
+   if seeding_strategy == 3    % test local search only 
+        % this method use cokriging sample to determine a starting point
+        % and local search
+        % cokriging sample both consider in std and outside std
+        [expensive_x, expensive_f, ~, ~, correlation] = ...
+            cokrg_trainingSampleExtension(xu, prob, archive_xu, archive_xl,  lower_trg, cokrg_samplesize);
+        
+        maxFE = maxFE - size(expensive_x, 1);
+        if correlation > 0.8
+            % retrieve ID
+            [~,~, close_id] = retrieve_neighbour(xu, lower_trg, archive_xu, archive_xl);
+            close_optxl =  archive_xl(close_id, :);
+            [match_xl, ~, history, output] = lowerlevel_fmincon(close_optxl, maxFE, prob.xl_bl, prob.xl_bu, funh_obj, funh_con);
+            
+            % record training data and evaluation usage
+            trgdata = [expensive_x, expensive_f;  ...
+                              history.x, history.fval];                          
+             lower_eval = lower_eval + size(expensive_x, 1) + output.funcCount; 
+              lower_searchSwitchFlag = 1;
+             return;
+        else
+            initmatrix = expensive_x;
+        end
+   end
+
+
     
 end
 
