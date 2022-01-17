@@ -24,8 +24,6 @@ ea_param.gen = 100;
 ea_param.popsize = 100;
 
 [starting_xl, ~, ~, ~, ~] = gsolver(funh_obj, num_xvar, cokrg_lb, cokrg_ub, [], funh_con, ea_param);
-
-
 [onbound_check] = onbound(starting_xl, cokrg_lb, cokrg_ub, prob);
 
 
