@@ -46,7 +46,7 @@ y_trg{2,:} = expensive_f;
 co_mdl = oodacefit(x_trg, y_trg);
 
 cokrg_lb = min(x_trg{2,:}, [], 1); % use cheap because it expensive overlaps with cheap
-cokrg_ub = max(x_trg{2,:} ,[], 1);
+cokrg_ub = max(x_trg{2,:}, [], 1);
 
 [cokrg_optxl, onbound] = cokriging_decisionmaking(co_mdl, prob, cokrg_lb, cokrg_ub);
 

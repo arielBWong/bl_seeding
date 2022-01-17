@@ -57,7 +57,7 @@ if ~isempty(archive_xu) && seeding_only % first generation on the upper level us
         return;
     end  
 
-    if seeding_strategy == 2    % test neighbour
+    if seeding_strategy == 4    % test neighbour
         % this method use cokriging sample to determine a starting point
         % and local search
         % cokriging sample both consider in std and outside std
@@ -80,10 +80,10 @@ if ~isempty(archive_xu) && seeding_only % first generation on the upper level us
             
             % if cokrging propose a point on boundary
             if landonbound
-                %  lower_eval has counted the match_xl in cokrg_localsearch
-                %  method
+                % lower_eval has counted the match_xl in cokrg_localsearch
+                % method
                 initmatrix = [cokrg_trg.expensive_x; match_xl];
-                % algorithm will continue to ea search part
+               %  algorithm will continue to ea search part
             else
                 lower_searchSwitchFlag = 1;
                 return;

@@ -27,7 +27,11 @@ end
 rng(seed, 'twister');
 global prob
 prob = eval(prob_str);
-
+ 
+existing = result_check(prob, seed, use_seeding,  seeding_strategy);
+if existing
+    return;
+end
 
 %------------------Process starts--------------------
 % insert global search
@@ -138,6 +142,37 @@ function c = up_constraint_func(prob, xu)
 c = [];
 end
 
+function existing = result_check(prob, seed, use_seeding,  seeding_strategy)
+existing = false;
+name = strcat('resultfolder_trueEval', num2str(prob.n_lvar));
+resultfolder = fullfile(pwd, name );
+% n = exist(resultfolder);
+% if n ~= 7
+%     existing = true;
+%     return;
+% end
+
+if use_seeding
+    foldername = strcat(prob.name, '_seeding_strategy_', num2str(seeding_strategy));
+else    
+    foldername = strcat(prob.name, '_baseline_ea');
+end
+
+resultfolder = fullfile(resultfolder, foldername);
+% n = exist(resultfolder);
+% if n ~= 7
+%     existing = true;
+%     return
+% end
+
+filename = strcat('xu_seed_', num2str(seed), '.csv');
+savename = fullfile(resultfolder, filename);
+
+if isfile(savename)
+    existing = true;
+end
+
+end
 
 function  save_results(xu, xl, prob, seed, use_seeding,  lower_eval,seeding_strategy, lower_decisionSwitch)
 

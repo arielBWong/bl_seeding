@@ -26,7 +26,7 @@ ea_param.popsize = 100;
 [starting_xl, ~, ~, ~, ~] = gsolver(funh_obj, num_xvar, cokrg_lb, cokrg_ub, [], funh_con, ea_param);
 
 
-[onbound_check] = onbound(starting_xl, cokrg_lb, cokrg_ub);
+[onbound_check] = onbound(starting_xl, cokrg_lb, cokrg_ub, prob);
 
 
 end
@@ -40,7 +40,7 @@ function c = noconstraint(x)
 c = [];
 end
 
-function [flag] = onbound(x, lb, ub)
+function [flag] = onbound(x, lb, ub, prob)
 % this function  check in normalized space
 % whether x is on boundary
 

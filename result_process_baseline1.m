@@ -7,9 +7,9 @@ problems = { 'smd1mp(1, 2, 1)' , 'smd2mp(1, 2, 1)',  'smd3mp(1, 2, 1)',  'smd4mp
 
 % problems = { 'smd1mp(1, 1, 1)' , 'smd2mp(1, 1, 1)',  'smd3mp(1, 1, 1)',  'smd4mp(1, 1, 1)', ....
 %      'smd5mp(1, 1, 1)' , 'smd6mp(1, 0, 1, 1)', 'smd7mp(1, 1, 1)',  'smd8mp(1, 1, 1)'};
-
+%
 % problems = {'smd1mp(1, 1, 1)'};
-methods = {'_baseline_ea', '_seeding_strategy_1', '_seeding_strategy_3'};
+methods = {'_baseline_ea', '_seeding_strategy_1', '_seeding_strategy_2', '_seeding_strategy_3',  '_seeding_strategy_4'};
 prob_test = eval(problems{1});
 nv = prob_test.n_lvar;
 
@@ -20,20 +20,21 @@ resultfolder = fullfile(pwd, foldername);
 np = length(problems);
 seed = 21;
 mseed = 11;
-sigTestIndex = 4;  % refer to the newest algorithm which is 4 in this case 
+sigTestIndex = 7;  % refer to the newest algorithm which is 4 in this case 
 
-methods = { '_seeding_strategy_2', '_seeding_strategy_3'};
-switch_ratio(problems, methods, resultfolder, seed, mseed);
 
 accuracy_extraction(problems, methods, resultfolder, np, seed, mseed, sigTestIndex);
 % accuracy_extractionExtension(problems, method, resultfolder, np, seed, mseed, sigTestIndex);
 FE_analysis(problems, methods, resultfolder, np, seed, mseed, sigTestIndex) ;
 
+methods = { '_seeding_strategy_2', '_seeding_strategy_3',  '_seeding_strategy_4'};
+switch_ratio(problems, methods, resultfolder, seed, mseed);
+
 problems = { 'smd1mp(1, 1, 1)' , 'smd2mp(1, 1, 1)',  'smd3mp(1, 1, 1)',  'smd4mp(1, 1, 1)', ....
-     'smd5mp(1, 1, 1)' , 'smd6mp(1, 0, 1, 1)', 'smd7mp(1, 1, 1)',  'smd8mp(1, 1, 1)'};
+     'smd5mp(1, 1, 1)', 'smd6mp(1, 0, 1, 1)', 'smd7mp(1, 1, 1)',  'smd8mp(1, 1, 1)'};
 
 % problems = {'smd1mp(1, 1, 1)'};
-method = {'_baseline_ea', '_seeding_strategy_1', '_seeding_strategy_2'};
+methods = {'_baseline_ea', '_seeding_strategy_1', '_seeding_strategy_2',  '_seeding_strategy_3', '_seeding_strategy_4'};
 prob_test = eval(problems{1});
 nv = prob_test.n_lvar;
 
@@ -43,12 +44,15 @@ resultfolder = fullfile(pwd, foldername);
 np = length(problems);
 seed = 21;
 mseed = 11;
-sigTestIndex = 4;  % refer to the newest algorithm which is 4 in this case 
+sigTestIndex = 7;  % refer to the newest algorithm which is 4 in this case 
 
 
 accuracy_extraction(problems, methods, resultfolder, np, seed, mseed, sigTestIndex);
 % accuracy_extractionExtension(problems, method, resultfolder, np, seed, mseed, sigTestIndex);
 FE_analysis(problems, methods, resultfolder, np, seed, mseed, sigTestIndex) 
+
+
+
 
 % success rate
 % method = {'0', '1', '_cokrg'};
@@ -140,7 +144,7 @@ for m = 1:nm
             
         end
     end    
-    
+
     localsearch_success1{m} = lowerSC1;
     localsearch_success2{m} = lowerSC2;
 end
@@ -335,7 +339,12 @@ end
 
 filename = strcat('median_FE_nlvar_', num2str(prob.n_lvar),'.csv');
 fp = fopen(filename, 'w');
-fprintf(fp, 'problems, baseline,  transferred solution to local search, transferred solution to local search+ , selective transfer \n');
+fprintf(fp, 'problems,');
+for im = 1:nm
+    fprintf(fp, '%s,', method{im});
+end
+fprintf(fp, '\n');
+
 for i = 1:np
     prob = eval(problems{i});
     fprintf(fp, '%s &,', prob.name);
@@ -386,7 +395,7 @@ end
 
 filename = strcat('median_accuracy_latex_nlvar_', num2str(prob.n_lvar),'.csv');
 fp = fopen(filename, 'w');
-fprintf(fp, 'problems,  baseline,  , transfer from neighbour optimal, , transfer from cokrg, \n');
+fprintf(fp, 'problems,  baseline,  , transfer 1, , transfer 2, ,transfer 3, , transfer 4, \n');
 
 for i = 1:np
     prob = eval(problems{i});
