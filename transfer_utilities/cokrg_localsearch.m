@@ -51,7 +51,7 @@ cokrg_ub = max(x_trg{2,:}, [], 1);
 [cokrg_optxl, onbound] = cokriging_decisionmaking(co_mdl, prob, cokrg_lb, cokrg_ub);
 
 if ~onbound
-    % eliminate situtions where proposed solution is not as good as
+    % eliminate situations where proposed solution is not as good as
     % existing one
     cokrg_optfl = prob.evaluate_l(xu, cokrg_optxl);
     if all(cokrg_optfl - expensive_f <= 0)

@@ -34,7 +34,7 @@ problems = {'smd5mp(1, 1, 1)' , 'smd7mp(1, 1, 1)',  'smd8mp(1, 1, 1)', ...
 %     'smd4mp(1, 2, 1)', 'smd6mp(1, 0, 2, 1)', };
 
 % tic;
-% blmapping_trueEvaldemo('smd7mp(1, 1, 1)',  1, 'use_seeding', true, 'seeding_strategy', 3);
+blmapping_trueEvaldemo('smd7mp(1, 1, 1)',  1, 'use_seeding', true, 'seeding_strategy', 4);
 % toc;
 
 % % % problems = { 'smd8mp(1, 1, 1)'};

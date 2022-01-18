@@ -28,10 +28,10 @@ rng(seed, 'twister');
 global prob
 prob = eval(prob_str);
  
-existing = result_check(prob, seed, use_seeding,  seeding_strategy);
-if existing
-    return;
-end
+% existing = result_check(prob, seed, use_seeding,  seeding_strategy);
+% if existing
+%     return;
+% end
 
 %------------------Process starts--------------------
 % insert global search
