@@ -15,14 +15,12 @@ L = any(L, 1); % if one column has nonzero means the vector represented by this 
 
 keeplist(L) = [];
 
-
-
 % use keeplist as selection criterion
 trgx = trgx(keeplist, :);
 trgf = trgf(keeplist, :);
 
 if length(keeplist) < n
-    fprintf('too close distance discovered in preparing cokring \n ');
-    fprintf('training data left size %d \n', size(trgx, 1));
+    fprintf('cokrg warning: too close distance discovered in preparing cokring \n ');
+    fprintf('cokrg warning: training data left size %d \n', size(trgx, 1));
 end
 end

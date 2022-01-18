@@ -57,7 +57,7 @@ if ~isempty(archive_xu) && seeding_only % first generation on the upper level us
         return;
     end  
 
-    if seeding_strategy == 4    % test neighbour
+    if seeding_strategy == 2    % test neighbour
         % this method use cokriging sample to determine a starting point
         % and local search
         % cokriging sample both consider in std and outside std
