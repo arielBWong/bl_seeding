@@ -1,16 +1,19 @@
-function plot2d_withCokring(xu, lb, ub, match_xl, close_optxl, prob, close_optxu, cokrg_mdl, cokrg_xl,...
-                            co_cheapx,co_cheapy, co_expensivex, co_expensivey, close_archive)
+function plot2d_withCokring(xu, lb, ub, match_xl, close_optxl, prob, close_optxu, cokrg_mdl,...
+                            co_cheapx, co_cheapy, co_expensivex, co_expensivey)
 % this function plot lower landscape 
 % with starting point from surrogate landscape
 
-fignh               = figure(3);
-fignh.Position      = [50, 100, 1000, 800];
-nt                  = 100;
+fignh = figure(3);
+fignh.Position = [50, 100, 1000, 800];
+nt = 100;
 
 
-x1_tst              = linspace(lb(1), ub(1), nt);
-x2_tst              = linspace(lb(2), ub(2), nt);
-[msx1, msx2]        = meshgrid(x1_tst, x2_tst);
+
+
+
+x1_tst = linspace(lb(1), ub(1), nt);
+x2_tst = linspace(lb(2), ub(2), nt);
+[msx1, msx2] = meshgrid(x1_tst, x2_tst);
 msx11 = msx1(:);
 msx22 = msx2(:);
 xl  = [msx11, msx22];
@@ -27,12 +30,8 @@ surf(msx1, msx2, fl, 'FaceAlpha',0.5, 'EdgeColor', 'none'); hold on;
 seed_flnew = prob.evaluate_l(xu, close_optxl);
 scatter3(close_optxl(1), close_optxl(2), seed_flnew,  80, 'r', 'filled' ); hold on;
 
-[seed_flcok, ~] = prob.evaluate_l(xu, cokrg_xl);
-scatter3(cokrg_xl(:, 1), cokrg_xl(:, 2), seed_flcok,  40, 'blue', 'filled'); hold on;
-
 scatter3(match_xl(1), match_xl(2), fl_match,  80, 'g', 'filled' ); hold on;
 scatter3(co_expensivex(:, 1), co_expensivex(:, 2), co_expensivey,  40, 'yellow', 'filled'); hold on;
-
 legend('landscape', 'close optimal',  'decision from cokrg', 'local search result from cokrg', 'expensive training', 'Location','north');
 
 
@@ -56,11 +55,6 @@ title('current landscape built from cokrg')
 f = cokrg_mdl.predict(xl);
 f = reshape(f, [nt, nt]);
 surf(msx1, msx2, f, 'FaceAlpha',0.5, 'EdgeColor', 'none'); hold on;
-
-
-[seed_fpred, ~] = cokrg_mdl.predict(cokrg_xl);
-scatter3(cokrg_xl(1), cokrg_xl(2), seed_fpred,  40, 'b', 'filled' ); hold on;
-
 
 % plot predicted results from expensive
 expensive_predy = cokrg_mdl.predict(co_expensivex);

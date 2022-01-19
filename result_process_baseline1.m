@@ -9,10 +9,11 @@ problems = { 'smd1mp(1, 2, 1)' , 'smd2mp(1, 2, 1)',  'smd3mp(1, 2, 1)',  'smd4mp
 %      'smd5mp(1, 1, 1)' , 'smd6mp(1, 0, 1, 1)', 'smd7mp(1, 1, 1)',  'smd8mp(1, 1, 1)'};
 %
 % problems = {'smd1mp(1, 1, 1)'};
-methods = {'_baseline_ea', '_seeding_strategy_1', '_seeding_strategy_2', '_seeding_strategy_3',  '_seeding_strategy_4'};
+methods = {'_baseline_ea', '_seeding_strategy_1', '_seeding_strategy_2', '_seeding_strategy_3'};
 prob_test = eval(problems{1});
 nv = prob_test.n_lvar;
 
+foldername = strcat('resultfolder_trueEval', num2str(nv), '_thr_90');
 foldername = strcat('resultfolder_trueEval', num2str(nv));
 resultfolder = fullfile(pwd, foldername);
 
@@ -27,17 +28,18 @@ accuracy_extraction(problems, methods, resultfolder, np, seed, mseed, sigTestInd
 % accuracy_extractionExtension(problems, method, resultfolder, np, seed, mseed, sigTestIndex);
 FE_analysis(problems, methods, resultfolder, np, seed, mseed, sigTestIndex) ;
 
-methods = { '_seeding_strategy_2', '_seeding_strategy_3',  '_seeding_strategy_4'};
+methods = { '_seeding_strategy_2', '_seeding_strategy_3', };
 switch_ratio(problems, methods, resultfolder, seed, mseed);
 
 problems = { 'smd1mp(1, 1, 1)' , 'smd2mp(1, 1, 1)',  'smd3mp(1, 1, 1)',  'smd4mp(1, 1, 1)', ....
      'smd5mp(1, 1, 1)', 'smd6mp(1, 0, 1, 1)', 'smd7mp(1, 1, 1)',  'smd8mp(1, 1, 1)'};
 
 % problems = {'smd1mp(1, 1, 1)'};
-methods = {'_baseline_ea', '_seeding_strategy_1', '_seeding_strategy_2',  '_seeding_strategy_3', '_seeding_strategy_4'};
+methods = {'_baseline_ea', '_seeding_strategy_1', '_seeding_strategy_2',  '_seeding_strategy_3'};
 prob_test = eval(problems{1});
 nv = prob_test.n_lvar;
 
+foldername = strcat('resultfolder_trueEval', num2str(nv), '_thr_90');
 foldername = strcat('resultfolder_trueEval', num2str(nv));
 resultfolder = fullfile(pwd, foldername);
 
@@ -45,7 +47,6 @@ np = length(problems);
 seed = 21;
 mseed = 11;
 sigTestIndex = 7;  % refer to the newest algorithm which is 4 in this case 
-
 
 accuracy_extraction(problems, methods, resultfolder, np, seed, mseed, sigTestIndex);
 % accuracy_extractionExtension(problems, method, resultfolder, np, seed, mseed, sigTestIndex);
@@ -381,7 +382,7 @@ for m = 1:nm
         for s = 1: seed
             filename = strcat('final_accuracy_seed_', num2str(s), '.csv');
             foldername =  strcat(prob.name, method{m});
-            savename = fullfile(resultfolder, foldername, filename)
+            savename = fullfile(resultfolder, foldername, filename);
             accuracy = csvread(savename);
             
             accuracy_up(p, s) = accuracy(1);
@@ -395,13 +396,16 @@ end
 
 filename = strcat('median_accuracy_latex_nlvar_', num2str(prob.n_lvar),'.csv');
 fp = fopen(filename, 'w');
-fprintf(fp, 'problems,  baseline,  , transfer 1, , transfer 2, ,transfer 3, , transfer 4, \n');
+fprintf(fp, 'problems,  baseline,  , transfer 1, , transfer 2, ,transfer 3, \n');
 
 for i = 1:np
     prob = eval(problems{i});
     fprintf(fp, '%s &,', prob.name);
     
     for j = 1:nm
+        if j == 2
+            a = 0;
+        end
         
         [~, id] = sort(method_results1{j}(i, :));
         nx = id(mseed);

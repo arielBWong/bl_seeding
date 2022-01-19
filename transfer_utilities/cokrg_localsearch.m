@@ -1,4 +1,4 @@
-function [match_xl, lower_evalcount, trgdata, onbound] = cokrg_localsearch(xu, prob, cokrg_trg, lower_evalcount, maxFE)
+function [match_xl, lower_evalcount, trgdata, localsearch_fail, co_mdl] = cokrg_localsearch(xu, prob, cokrg_trg, lower_evalcount, maxFE)
 %  This function does:
 %  (1) builds cokrging model
 %  (2) use cokrging to propose starting point (call: cokriging_decisionmaking)
@@ -22,6 +22,7 @@ cheap_f = cokrg_trg.cheap_f ;
 [~, ia, ~] = unique(cheap_x, 'rows');    % check unique
 cheap_x = cheap_x(ia, :);
 cheap_f = cheap_f(ia, :);
+
 % fprintf('cheap candidate go through distance check \n');
 [cheap_x, cheap_f] = keepdistance_rawdata(cheap_x, cheap_f, prob.xl_bl, prob.xl_bu);
 
@@ -36,6 +37,7 @@ expensive_f = cokrg_trg.expensive_f;
 [~, ia, ~]  = unique(expensive_x, 'rows');    % check unique
 expensive_x = expensive_x(ia, :);
 expensive_f = expensive_f(ia, :);
+
 % fprintf('expensive candidate go through distance check \n');
 [expensive_x, expensive_f] = keepdistance_rawdata(expensive_x, expensive_f, prob.xl_bl, prob.xl_bu);
 
@@ -48,11 +50,12 @@ co_mdl = oodacefit(x_trg, y_trg);
 cokrg_lb = min(x_trg{2,:}, [], 1); % use cheap because it expensive overlaps with cheap
 cokrg_ub = max(x_trg{2,:}, [], 1);
 
-bd_funh = @(x)onbound(x, cokrg_lb, cokrg_ub, prob);
+bd_funh = @(x)onbound_withoutProblemBound(x, cokrg_lb, cokrg_ub, prob);
 [cokrg_optxl, onbound_check] = cokriging_decisionmaking(co_mdl, prob, cokrg_lb, cokrg_ub, bd_funh);
 
 if ~onbound_check
      [match_xl, lower_evalcount, trgdata] = cokrg_postprocess(cokrg_optxl, prob, xu, maxFE, lower_evalcount, expensive_x, expensive_f);
+     localsearch_fail = false;
     return
 else
     % as this step will later switch to ea search, trgdata is filled there
@@ -85,10 +88,13 @@ else
 
     if onbound_check
         trgdata = 'place holder';
-        match_xl = cokrg_optxl;
-        lower_evalcount = lower_evalcount + 1;
+        match_xl = [];
+        lower_evalcount = lower_evalcount + 1; % one more evaluation 
+        localsearch_fail = true;
     else
+        lower_evalcount = lower_evalcount + 1;
         [match_xl, lower_evalcount, trgdata] = cokrg_postprocess(cokrg_optxl, prob, xu, maxFE, lower_evalcount, expensive_x, expensive_f);
+        localsearch_fail = false;
         return
 
     end
@@ -112,5 +118,74 @@ end
 %  TO BE NOTED: in local search output.funcCount is not the same number
 %  as history.x, history.f Therefore  recorded FEs is not the same size
 %  as collected  solutions in trgdata
-trgdata = [cokrg_trg.expensive_x, cokrg_trg.expensive_f; x_visited, f_visited];
+trgdata = [expensive_x, expensive_f; x_visited, f_visited];
 end
+
+function [flag] = onbound_withoutProblemBound(x, lb, ub, prob)
+% this function  check in normalized space
+% whether x is on boundary
+
+flag_up = false;
+flag_down = true;
+
+x_norm = (x - prob.xl_bl)./(prob.xl_bu - prob.xl_bl);
+lb_norm = (lb - prob.xl_bl) ./(prob.xl_bu - prob.xl_bl);
+ub_norm = (ub-prob.xl_bl) ./(prob.xl_bu - prob.xl_bl);
+
+
+check_ub = ub_norm - x_norm;
+id_ub = check_ub < 1e-6;
+if any(id_ub > 0)
+   flag_up = true; 
+end
+
+check_lb = x_norm - lb_norm;
+id_lb = check_lb < 1e-6;
+if any(id_lb > 0)
+    flag_down = true;
+end
+
+flag = flag_up|flag_down;
+end
+
+
+function [flag] = onbound_considerProblemBound(x, lb, ub, prob)
+% this function  check in normalized space
+% whether x is on boundary
+
+flag_up = false;
+flag_down = false;
+
+x_norm = (x - prob.xl_bl)./(prob.xl_bu - prob.xl_bl);
+lb_norm = (lb - prob.xl_bl) ./(prob.xl_bu - prob.xl_bl);
+ub_norm = (ub - prob.xl_bl) ./(prob.xl_bu - prob.xl_bl);
+
+prob_unorm = ones(1, prob.n_lvar);
+prob_lnorm = zeros(1, prob.n_lvar);
+
+check_ub = ub_norm - x_norm;
+id_ub = check_ub < 1e-6;
+if any(id_ub > 0) 
+   check_probound = prob_unorm - x_norm;
+   if any(check_probound < 1e-6)
+       flag_up = false; % if the second time it is still on problem bound, then consider it not on bound
+   else
+       flag_up = true; 
+   end
+ 
+end
+
+check_lb = x_norm - lb_norm;
+id_lb = check_lb < 1e-6;
+if any(id_lb > 0)
+    check_probound = x_norm - prob_lnorm;
+    if any(check_probound < 1e-6)
+        flag_up = false; % if the second time it is still on problem bound, then consider it not on bound
+    else
+        flag_up = true;
+    end
+end
+
+flag = flag_up|flag_down;
+
+end 

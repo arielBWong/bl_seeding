@@ -35,13 +35,14 @@ prob = eval(prob_str);
 
 %------------------Process starts--------------------
 % insert global search
+thr = 0.8;
 inisize_l = 20;
 xl_probe = lhsdesign(inisize_l, prob.n_lvar, 'criterion','maximin','iterations',1000);
 xl_probe = repmat(prob.xl_bl, inisize_l, 1) ...
     + repmat((prob.xl_bu - prob.xl_bl), inisize_l, 1) .* xl_probe;
 
-funh_external = @(pop)up_probrecord(pop,  xl_probe, prob);
-funh_obj  =  @(x)up_objective_func(prob, x, use_seeding, seeding_strategy);
+funh_external = @(pop)up_probrecord(pop);
+funh_obj  =  @(x)up_objective_func(prob, x, use_seeding, seeding_strategy, thr);
 funh_con  =  @(x)up_constraint_func(prob, x);
 
 param.gen = 9;
@@ -51,7 +52,7 @@ ub = prob.xu_bu;
 num_xvar = prob.n_uvar;
 initmatrix = [];
 
-global upper_xu  % upper archive 
+global upper_xu   % upper archive 
 global lower_xl   % lower archive
 global lower_eval
 global lower_mdl
@@ -65,15 +66,15 @@ lower_xl = [];
 
 lower_eval = 0;
 lower_mdl = {};
-lower_trg ={};
+lower_trg = {};
 lower_decisionSwitch = zeros(param.gen, param.popsize);
 
-[best_x, ~, ~, a, ~] = gsolver(funh_obj, num_xvar, lb, ub, initmatrix, funh_con, param,  'externalfunction', funh_external,  'visualize', false);
-save_results(upper_xu, lower_xl, prob,  seed, use_seeding, lower_eval, seeding_strategy, lower_decisionSwitch);
+[best_x, ~, ~, a, ~] = gsolver(funh_obj, num_xvar, lb, ub, initmatrix, funh_con, param,  'externalfunction', funh_external,  'visualize', true);
+save_results(upper_xu, lower_xl, prob,  seed, use_seeding, lower_eval, seeding_strategy, lower_decisionSwitch, thr);
 
 end
 
-function out = up_probrecord(pop, xl_probe, prob)
+function out = up_probrecord(pop)
 % re-do one more round of initialization
 % 
 
@@ -91,7 +92,7 @@ lower_trg = [lower_trg, pop.trgdata];
 out = [];
 end
 
-function [output] =  up_objective_func(prob, xu, use_seeding, seeding_strategy)
+function [output] =  up_objective_func(prob, xu, use_seeding, seeding_strategy, thr)
 
 global upper_xu
 global lower_xl
@@ -113,12 +114,17 @@ vis= false;
 for i = 1:m
     fprintf('gen %d, ind %d \n ', g, i);
     xui = xu(i, :);
+%     if g == 4 && i== 1
+%         a = 0;
+%         vis = true;
+%     end
     
     [match_xl, mdl, trgdata, lower_searchSwitchFlag] = llmatch_trueEvaluation(xui, prob, ...
         'archive_xu', upper_xu, 'archive_xl', lower_xl,...
         'seeding_only', use_seeding,  'seeding_strategy', seeding_strategy, ...
-        'visualization', vis);
+        'visualization', vis, 'threshold', thr);
     
+    vis =  false;
     fi = prob.evaluate_u(xui, match_xl);
     
     xl = [xl; match_xl];
@@ -174,12 +180,13 @@ end
 
 end
 
-function  save_results(xu, xl, prob, seed, use_seeding,  lower_eval,seeding_strategy, lower_decisionSwitch)
+function  save_results(xu, xl, prob, seed, use_seeding,  lower_eval,seeding_strategy, lower_decisionSwitch, thr)
 
 [fu, cu] = prob.evaluate_u(xu, xl);   % lazy  step
 [fl, cl] = prob.evaluate_l(xu, xl);
 
-name = strcat('resultfolder_trueEval', num2str(prob.n_lvar));
+thr = thr*100;
+name = strcat('resultfolder_trueEval', num2str(prob.n_lvar), '_thr_', num2str(thr));
 resultfolder = fullfile(pwd, name );
 n = exist(resultfolder);
 if n ~= 7

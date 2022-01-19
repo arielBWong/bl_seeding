@@ -14,6 +14,7 @@ addParameter(p, 'seeding_only', false);  % conduct seeding controller
 addParameter(p, 'archive_xu', []);  % upper level all evaluated xu
 addParameter(p, 'archive_xl', []);  % lower level matching xl, might larger than xu due to asynsic update
 addParameter(p, 'seeding_strategy', 1); % 1 nearest neighbour 2 cokrging starting
+addParameter(p, 'threshold', 0.9); % 1 nearest neighbour 2 cokrging starting
 parse(p, upper_xu, prob, xl_probe, varargin{:});
 % -----------------------------------
 
@@ -24,6 +25,7 @@ archive_xu = p.Results.archive_xu;
 archive_xl = p.Results.archive_xl;
 prob = p.Results.prob;
 seeding_strategy = p.Results.seeding_strategy;
+thr = p.Results.threshold;
 %------------------------------------------------
 
 lower_searchSwitchFlag = 0;
@@ -73,19 +75,36 @@ if ~isempty(archive_xu) && seeding_only % first generation on the upper level us
         cokrg_trg.cheap_x = [cheap_x; neighbour_optxl];
         cokrg_trg.cheap_f = [cheap_f; neighbour_optfl];
         
-        if correlation > 0.8
+        if correlation > thr
             % expensive x went through distance check
             maxFE = maxFE - size(cokrg_trg.expensive_x, 1);
-            [match_xl, lower_eval, trgdata, landonbound] = cokrg_localsearch(xu, prob, cokrg_trg, lower_eval, maxFE);   
+            % expensive_x is counted inside cokrg_localsearch
+            [match_xl, lower_eval, trgdata, localsearch_fail, cokrg_mdl] = cokrg_localsearch(xu, prob, cokrg_trg, lower_eval, maxFE);   
             
             % if cokrging propose a point on boundary
-            if landonbound
+            if localsearch_fail
                 % lower_eval has counted the match_xl in cokrg_localsearch
                 % method
                 initmatrix = [cokrg_trg.expensive_x; match_xl];
                %  algorithm will continue to ea search part
             else
                 lower_searchSwitchFlag = 1;
+                % test purpose
+                f_test = prob.evaluate_l(xu, match_xl);
+                xl_prime = prob.get_xlprime(xu);
+                fl_prime = prob.evaluate_l(xu, xl_prime);
+
+                if abs(fl_prime - f_test) > 0.01 % || visualization
+                    % plot 
+                    [close_optxu, close_optxl, ~] = retrieve_neighbour(xu, lower_trg, archive_xu, archive_xl);
+                   
+                    plot2d_withCokring(xu, prob.xl_bl, prob.xl_bu, match_xl, close_optxl, prob, close_optxu, cokrg_mdl,...
+                        cokrg_trg.cheap_x, cokrg_trg.cheap_f, cokrg_trg.expensive_x, cokrg_trg.expensive_f)
+
+                     % plot2d_withCokring(xu, lb, ub, match_xl, close_optxl, prob, close_optxu, cokrg_mdl,...
+                            % co_cheapx, co_cheapy, co_expensivex, co_expensivey)
+                end
+                %---- 
                 return;
             end
         else
@@ -101,7 +120,7 @@ if ~isempty(archive_xu) && seeding_only % first generation on the upper level us
             cokrg_trainingSampleExtension(xu, prob, archive_xu, archive_xl,  lower_trg, cokrg_samplesize);
         
         maxFE = maxFE - size(expensive_x, 1);
-        if correlation > 0.8
+        if correlation > thr
             % retrieve ID
             [~,~, close_id] = retrieve_neighbour(xu, lower_trg, archive_xu, archive_xl);
             close_optxl =  archive_xl(close_id, :);
