@@ -2,55 +2,50 @@
 problem_folder = strcat(pwd,'/problems/TP3');
 addpath(problem_folder);
 
-problems = { 'smd1mp(1, 2, 1)' , 'smd2mp(1, 2, 1)',  'smd3mp(1, 2, 1)',  'smd4mp(1, 2, 1)', ....
-    'smd5mp(1, 2, 1)' , 'smd6mp(1, 0, 2, 1)', 'smd7mp(1, 2, 1)',  'smd8mp(1, 2, 1)'};
-
-% problems = { 'smd1mp(1, 1, 1)' , 'smd2mp(1, 1, 1)',  'smd3mp(1, 1, 1)',  'smd4mp(1, 1, 1)', ....
-%      'smd5mp(1, 1, 1)' , 'smd6mp(1, 0, 1, 1)', 'smd7mp(1, 1, 1)',  'smd8mp(1, 1, 1)'};
-%
-% problems = {'smd1mp(1, 1, 1)'};
-methods = {'_baseline_ea', '_seeding_strategy_1', '_seeding_strategy_2', '_seeding_strategy_3'};
-prob_test = eval(problems{1});
-nv = prob_test.n_lvar;
-
-foldername = strcat('resultfolder_trueEval', num2str(nv), '_thr_90');
-foldername = strcat('resultfolder_trueEval', num2str(nv));
-resultfolder = fullfile(pwd, foldername);
 
 
-np = length(problems);
-seed = 21;
-mseed = 11;
-sigTestIndex = 7;  % refer to the newest algorithm which is 4 in this case 
+problems_2 = cell(1, 2);
 
+% problems_2{1} = { 'smd1mp(1, 2, 1)' , 'smd2mp(1, 2, 1)',  'smd3mp(1, 2, 1)',  'smd4mp(1, 2, 1)', ....
+%     'smd5mp(1, 2, 1)' , 'smd6mp(1, 0, 2, 1)', 'smd7mp(1, 2, 1)',  'smd8mp(1, 2, 1)'};
 
-accuracy_extraction(problems, methods, resultfolder, np, seed, mseed, sigTestIndex);
-% accuracy_extractionExtension(problems, method, resultfolder, np, seed, mseed, sigTestIndex);
-FE_analysis(problems, methods, resultfolder, np, seed, mseed, sigTestIndex) ;
-
-methods = { '_seeding_strategy_2', '_seeding_strategy_3', };
-switch_ratio(problems, methods, resultfolder, seed, mseed);
-
-problems = { 'smd1mp(1, 1, 1)' , 'smd2mp(1, 1, 1)',  'smd3mp(1, 1, 1)',  'smd4mp(1, 1, 1)', ....
+problems_2{1} = { 'smd1mp(1, 1, 1)' , 'smd2mp(1, 1, 1)',  'smd3mp(1, 1, 1)',  'smd4mp(1, 1, 1)', ....
      'smd5mp(1, 1, 1)', 'smd6mp(1, 0, 1, 1)', 'smd7mp(1, 1, 1)',  'smd8mp(1, 1, 1)'};
 
-% problems = {'smd1mp(1, 1, 1)'};
-methods = {'_baseline_ea', '_seeding_strategy_1', '_seeding_strategy_2',  '_seeding_strategy_3'};
-prob_test = eval(problems{1});
-nv = prob_test.n_lvar;
+methods = {'_baseline_ea', '_seeding_strategy_1', '_seeding_strategy_2', '_seeding_strategy_3'};
 
-foldername = strcat('resultfolder_trueEval', num2str(nv), '_thr_90');
-foldername = strcat('resultfolder_trueEval', num2str(nv));
-resultfolder = fullfile(pwd, foldername);
+for is = 1:1
+    problems = problems_2{is};
+    prob_test = eval(problems{1});
+    nv = prob_test.n_lvar;
 
-np = length(problems);
-seed = 21;
-mseed = 11;
-sigTestIndex = 7;  % refer to the newest algorithm which is 4 in this case 
+    np = length(problems);
+    seed = 21;
+    mseed = 11;
+    sigTestIndex = 7;  % refer to the newest algorithm which is 4 in this case
 
-accuracy_extraction(problems, methods, resultfolder, np, seed, mseed, sigTestIndex);
-% accuracy_extractionExtension(problems, method, resultfolder, np, seed, mseed, sigTestIndex);
-FE_analysis(problems, methods, resultfolder, np, seed, mseed, sigTestIndex) 
+
+    foldername = strcat('resultfolder_trueEval', num2str(nv), '_thr_90');
+    % foldername = strcat('resultfolder_trueEval', num2str(nv));
+    resultfolder = fullfile(pwd, foldername);
+
+
+    outfoldername = strcat('processedresult_trueEval', num2str(nv), '_thr_90');
+    % outfoldername = strcat('processedresult_trueEval', num2str(nv));
+    outfoldername = fullfile(pwd, outfoldername);
+
+    if ~exist(outfoldername, 'dir')
+        mkdir(outfoldername);
+    end
+
+    accuracy_extraction(problems, methods, resultfolder, np, seed, mseed, sigTestIndex, outfoldername);
+    % accuracy_extractionExtension(problems, method, resultfolder, np, seed, mseed, sigTestIndex);
+    FE_analysis(problems, methods, resultfolder, np, seed, mseed, sigTestIndex, outfoldername) ;
+
+    methods = { '_seeding_strategy_2', '_seeding_strategy_3', };
+    switch_ratio(problems, methods, resultfolder, seed, mseed,outfoldername);
+end
+
 
 
 
@@ -60,7 +55,7 @@ FE_analysis(problems, methods, resultfolder, np, seed, mseed, sigTestIndex)
 % lowerSuccessRate(problems, method, resultfolder, np, seed, mseed);
 % lowerSuccessRateExtension(problems, method, resultfolder, np, seed, mseed);
 
-function[] = switch_ratio(problems, methods, resultfolder, ns, median_ns)
+function[] = switch_ratio(problems, methods, resultfolder, ns, median_ns, outfoldername)
 % This function calculates the ratio of switch to global search after
 % the first generation 
 % only work for strategy 2 and 3
@@ -100,6 +95,7 @@ end
 
 % write into files
 filename = strcat('globalSwitch_mean_nvar_', num2str(prob.n_lvar),'.csv');
+filename = fullfile(outfoldername, filename);
 fp = fopen(filename, 'w');
 fprintf(fp, 'problem/methods, ');
 for im = 1:nm
@@ -318,7 +314,7 @@ end
 fclose(fp);
 end
 
-function [] = FE_analysis(problems, method, resultfolder, np, seed, mseed, sigTestIndex) 
+function [] = FE_analysis(problems, method, resultfolder, np, seed, mseed, sigTestIndex, outfoldername) 
 
 nm = length(method);
 
@@ -339,6 +335,7 @@ for m = 1:nm
 end
 
 filename = strcat('median_FE_nlvar_', num2str(prob.n_lvar),'.csv');
+filename = fullfile(outfoldername, filename);
 fp = fopen(filename, 'w');
 fprintf(fp, 'problems,');
 for im = 1:nm
@@ -364,7 +361,7 @@ fclose(fp);
 
 end
 
-function[] = accuracy_extraction(problems, method, resultfolder, np, seed, mseed, sigTestIndex)
+function[] = accuracy_extraction(problems, method, resultfolder, np, seed, mseed, sigTestIndex,outfoldername)
 % sigTestIndex is to specify sigtest columne,
 
 
@@ -395,6 +392,7 @@ for m = 1:nm
 end
 
 filename = strcat('median_accuracy_latex_nlvar_', num2str(prob.n_lvar),'.csv');
+filename = fullfile(outfoldername, filename);
 fp = fopen(filename, 'w');
 fprintf(fp, 'problems,  baseline,  , transfer 1, , transfer 2, ,transfer 3, \n');
 

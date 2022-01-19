@@ -94,16 +94,16 @@ if ~isempty(archive_xu) && seeding_only % first generation on the upper level us
                 xl_prime = prob.get_xlprime(xu);
                 fl_prime = prob.evaluate_l(xu, xl_prime);
 
-                if abs(fl_prime - f_test) > 0.01 % || visualization
-                    % plot 
-                    [close_optxu, close_optxl, ~] = retrieve_neighbour(xu, lower_trg, archive_xu, archive_xl);
-                   
-                    plot2d_withCokring(xu, prob.xl_bl, prob.xl_bu, match_xl, close_optxl, prob, close_optxu, cokrg_mdl,...
-                        cokrg_trg.cheap_x, cokrg_trg.cheap_f, cokrg_trg.expensive_x, cokrg_trg.expensive_f)
-
-                     % plot2d_withCokring(xu, lb, ub, match_xl, close_optxl, prob, close_optxu, cokrg_mdl,...
-                            % co_cheapx, co_cheapy, co_expensivex, co_expensivey)
-                end
+%                 if abs(fl_prime - f_test) > 0.01 % || visualization
+%                     % plot 
+%                     [close_optxu, close_optxl, ~] = retrieve_neighbour(xu, lower_trg, archive_xu, archive_xl);
+%                    
+%                     plot2d_withCokring(xu, prob.xl_bl, prob.xl_bu, match_xl, close_optxl, prob, close_optxu, cokrg_mdl,...
+%                         cokrg_trg.cheap_x, cokrg_trg.cheap_f, cokrg_trg.expensive_x, cokrg_trg.expensive_f)
+% 
+%                      % plot2d_withCokring(xu, lb, ub, match_xl, close_optxl, prob, close_optxu, cokrg_mdl,...
+%                             % co_cheapx, co_cheapy, co_expensivex, co_expensivey)
+%                 end
                 %---- 
                 return;
             end
