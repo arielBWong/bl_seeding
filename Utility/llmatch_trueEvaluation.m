@@ -135,10 +135,7 @@ if ~isempty(archive_xu) && seeding_only % first generation on the upper level us
         else
             initmatrix = expensive_x;
         end
-   end
-
-
-    
+   end 
 end
 
 
@@ -161,6 +158,8 @@ lower_eval = lower_eval + (param.gen + 1) * param.popsize - size(initmatrix, 1);
 
 match_xl = best_x;
 trgdata = [archive_search.sols(:, 2: prob.n_lvar + 1), archive_search.sols(:, prob.n_lvar + 2: end)];
+
+
 
 end
 

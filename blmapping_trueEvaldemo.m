@@ -7,6 +7,7 @@ addRequired(p, 'problem_str');
 addRequired(p, 'seed');
 addParameter(p, 'use_seeding', false);
 addParameter(p, 'seeding_strategy', 1);
+addParameter(p, 'threshold', 0.8);
 parse(p, problem_str, seed, varargin{:});
 
 %--- assign input parameters
@@ -14,6 +15,7 @@ prob_str = p.Results.problem_str;
 seed = p.Results.seed;
 use_seeding = p.Results.use_seeding;
 seeding_strategy = p.Results.seeding_strategy;
+thr = p.Results.threshold;
 %---
 
 visualize = false;
@@ -35,7 +37,7 @@ prob = eval(prob_str);
 
 %------------------Process starts--------------------
 % insert global search
-thr = 0.8;
+
 inisize_l = 20;
 xl_probe = lhsdesign(inisize_l, prob.n_lvar, 'criterion','maximin','iterations',1000);
 xl_probe = repmat(prob.xl_bl, inisize_l, 1) ...
@@ -43,7 +45,7 @@ xl_probe = repmat(prob.xl_bl, inisize_l, 1) ...
 
 funh_external = @(pop)up_probrecord(pop);
 funh_obj  =  @(x)up_objective_func(prob, x, use_seeding, seeding_strategy, thr);
-funh_con  =  @(x)up_constraint_func(prob, x);
+funh_con  =  @(x)up_constraint_func();
 
 param.gen = 9;
 param.popsize = 50;
@@ -69,10 +71,69 @@ lower_mdl = {};
 lower_trg = {};
 lower_decisionSwitch = zeros(param.gen, param.popsize);
 
-[best_x, ~, ~, a, ~] = gsolver(funh_obj, num_xvar, lb, ub, initmatrix, funh_con, param,  'externalfunction', funh_external,  'visualize', true);
-save_results(upper_xu, lower_xl, prob,  seed, use_seeding, lower_eval, seeding_strategy, lower_decisionSwitch, thr);
+[best_x, ~, ~, ~, ~] = gsolver(funh_obj, num_xvar, lb, ub, initmatrix, funh_con, param,  'externalfunction', funh_external,  'visualize', false);
+
+
+% Re-evaluation post process
+% retrieve the last population
+xu_lastpop = upper_xu(end - param.popsize + 1:end, :);
+xl_lastpop = lower_xl(end - param.popsize + 1:end, :);
+fu_lastpop = prob.evaluate_u(xu_lastpop, xl_lastpop);    % lazy step
+
+lowertrgdata_lastpop = lower_trg(end - param.popsize + 1 : end);
+indx_reeval = zeros(param.popsize, 1); % re-evaluation index
+
+selected_xu = xu_lastpop(1, :);
+selected_xl = xl_lastpop(1, :);
+
+extra_lowerEval = 0;
+
+reparam.gen = 19;
+reparam.popsize = 50;
+
+for ip = 1 : param.popsize
+    % check condition (1) solution that is not fully evaluated
+    % (2) after reevaluation position changes (i.e. no more best solution in the population)
+    if indx_reeval(1,1) == 0 && size(lowertrgdata_lastpop{1}, 1) < 500 
+        indx_reeval(1) = 1;
+        
+        
+        xl_reeval = re_evaluation(prob, xu_lastpop(1, :), xl_lastpop(1, :), reparam); % always reevaluate top one
+        
+        extra_lowerEval = extra_lowerEval + reparam.popsize * (reparam.gen + 1) - 1;
+        fu_reeval = prob.evaluate_u(xu_lastpop(1, :), xl_reeval);
+        fu_lastpop(1, :) = fu_reeval;   % replace existing value;
+        xl_lastpop(1, :) = xl_reeval;
+        [~, idx] = sort(fu_lastpop);
+
+        xu_lastpop = xu_lastpop(idx, : );
+        xl_lastpop = xl_lastpop(idx, :);
+        fu_lastpop = fu_lastpop(idx, :);
+        lowertrgdata_lastpop = lowertrgdata_lastpop(idx);
+        indx_reeval = indx_reeval(idx, :);
+    else
+        selected_xu = xu_lastpop(1, :);
+        selected_xl = xl_lastpop(1, :); 
+        break;
+    end
+end
+
+save_results(upper_xu, lower_xl, prob,  selected_xu, selected_xl, seed, use_seeding, lower_eval, extra_lowerEval, seeding_strategy, lower_decisionSwitch, thr);
 
 end
+
+function xl_reeval = re_evaluation(prob, xu, xl, param)
+% 
+initmatrix = xl;
+funh_obj = @(x)prob.evaluate_l(xu, x);
+funh_con = @(x)up_constraint_func(); % re-use same outcome function
+
+num_xvar = prob.n_lvar;
+[xl_reeval, ~, ~, ~, ~] = gsolver(funh_obj, num_xvar, prob.xl_bl, prob.xl_bu, initmatrix, funh_con, param);
+
+                            
+end
+
 
 function out = up_probrecord(pop)
 % re-do one more round of initialization
@@ -114,10 +175,6 @@ vis= false;
 for i = 1:m
     fprintf('gen %d, ind %d \n ', g, i);
     xui = xu(i, :);
-%     if g == 4 && i== 1
-%         a = 0;
-%         vis = true;
-%     end
     
     [match_xl, mdl, trgdata, lower_searchSwitchFlag] = llmatch_trueEvaluation(xui, prob, ...
         'archive_xu', upper_xu, 'archive_xl', lower_xl,...
@@ -144,19 +201,17 @@ output.mdl = mdls;
 output.trgdata = trgdatas;
 end
 
-function c = up_constraint_func(prob, xu)
+function c = up_constraint_func()
 c = [];
 end
 
+
+
 function existing = result_check(prob, seed, use_seeding,  seeding_strategy)
+% this method is used for  breakpoint reconnect
 existing = false;
 name = strcat('resultfolder_trueEval', num2str(prob.n_lvar));
 resultfolder = fullfile(pwd, name );
-% n = exist(resultfolder);
-% if n ~= 7
-%     existing = true;
-%     return;
-% end
 
 if use_seeding
     foldername = strcat(prob.name, '_seeding_strategy_', num2str(seeding_strategy));
@@ -165,11 +220,6 @@ else
 end
 
 resultfolder = fullfile(resultfolder, foldername);
-% n = exist(resultfolder);
-% if n ~= 7
-%     existing = true;
-%     return
-% end
 
 filename = strcat('xu_seed_', num2str(seed), '.csv');
 savename = fullfile(resultfolder, filename);
@@ -180,7 +230,7 @@ end
 
 end
 
-function  save_results(xu, xl, prob, seed, use_seeding,  lower_eval,seeding_strategy, lower_decisionSwitch, thr)
+function  save_results(xu, xl, prob, selected_xu, selected_xl, seed, use_seeding,  lower_eval, extra_lowerEval, seeding_strategy, lower_decisionSwitch, thr)
 
 [fu, cu] = prob.evaluate_u(xu, xl);   % lazy  step
 [fl, cl] = prob.evaluate_l(xu, xl);
@@ -224,7 +274,7 @@ csvwrite(savename, fl);
 
 filename = strcat('lowerlevelcount_seed_', num2str(seed), '.csv');
 savename = fullfile(resultfolder, filename);
-csvwrite(savename, lower_eval);
+csvwrite(savename, [lower_eval, extra_lowerEval]);
 
 filename = strcat('lowerlevelswitch_seed_',  num2str(seed), '.mat');
 savename = fullfile(resultfolder, filename);
@@ -258,9 +308,11 @@ if size(fu, 2) > 1
     savename = fullfile(resultfolder, filename);
     csvwrite(savename, igd);
 else
-    [best_x, best_f, best_c, s, index] =  localsolver_startselection(xu, fu, cu);
-    ulp = abs(prob.fu_prime - best_f);
-    llp = abs(prob.fl_prime - fl(index) );
+    % [best_x, best_f, best_c, s, index] =  localsolver_startselection(xu, fu, cu);
+    best_fu = prob.evaluate_u(selected_xu, selected_xl);
+    best_fl = prob.evaluate_l(selected_xu, selected_xl);
+    ulp = abs(prob.fu_prime - best_fu);
+    llp = abs(prob.fl_prime - best_fl);
     filename = strcat('final_accuracy_seed_', num2str(seed), '.csv');
     savename = fullfile(resultfolder, filename);
     csvwrite(savename, [ulp, llp]);

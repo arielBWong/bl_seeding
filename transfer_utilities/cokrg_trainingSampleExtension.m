@@ -121,7 +121,7 @@ for i = 1:bound_count
     expensive_x = [expensive_x; xl_samples(end - i+1, :)];
 end
 
-%plotsamples(seed_xu, seed_xl, prob, prob.xl_bl, prob.xl_bu, close_xlarchive, xl_samples, expensive_x);
+
 
 xuu = repmat(xu, ns, 1);
 expensive_f = prob.evaluate_l(xuu, expensive_x); 
@@ -129,9 +129,32 @@ expensive_f = prob.evaluate_l(xuu, expensive_x);
 correlation = corr(cheap_f, expensive_f(1:ns-bound_count,:));
 fprintf('Correlation with closest landscape is %0.4f \n', correlation);
 
+% add more LF samples
+extra_lb = min(expensive_x, [], 1); % use cheap because it expensive overlaps with cheap
+extra_ub = max(expensive_x, [], 1);
+cheap_extrax = lhsdesign(ns, prob.n_lvar, 'criterion','maximin','iterations',1000);
+cheap_extrax = repmat(extra_lb, ns, 1) ...
+    + repmat((extra_ub -extra_lb), ns, 1) .* cheap_extrax;
+
+% match extra with archive 
+for i = 1:ns
+    [~, I] = pdist2(close_xlarchive, cheap_extrax(i, :),  'euclidean', 'Smallest', 1); % process one by one
+
+    cheap_x = [cheap_x; close_xlarchive(I, :)];
+    cheap_f = [cheap_f; close_fl(I, :)];
+    
+    % unique process, to make sure use as much archive as possible
+    close_xlarchive(I, :) = [];
+    close_fl(I, :) = [];
 end
 
-function plotsamples(seed_xu, seed_xl, prob, lb, ub, archive_xl, samples_xl, HFx)
+
+% plotsamples(seed_xu, seed_xl, prob, prob.xl_bl, prob.xl_bu,  lower_searchdata_cly{close_id}(:, 1:end-1), xl_samples, expensive_x, cheap_x);
+
+
+end
+
+function plotsamples(seed_xu, seed_xl, prob, lb, ub, archive_xl, samples_xl, HFx, LFx)
 fignh = figure(1);
 nt = 100;
 
@@ -155,10 +178,16 @@ fl_samples = prob.evaluate_l(xum, samples_xl);
 xum = repmat(seed_xu, size(HFx, 1), 1);
 fl_HFx = prob.evaluate_l(xum, HFx);
 
-surf(msx1, msx2, fl, 'FaceAlpha', 0.5, 'EdgeColor', 'none'); hold on;
-scatter3(archive_xl(:, 1), archive_xl(:, 2), fl_archive, 20, 'r', 'filled' ); hold on;
+xum = repmat(seed_xu, size(LFx, 1), 1);
+fl_LFx = prob.evaluate_l(xum, LFx);
+
+
 
 scatter3(HFx(:, 1), HFx(:, 2), fl_HFx, 40, 'g', 'filled' ); hold on;
+
+scatter3(LFx(:, 1), LFx(:, 2), fl_LFx, 70, 'k' ); hold on;
+surf(msx1, msx2, fl, 'FaceAlpha', 0.5, 'EdgeColor', 'none'); hold on;
+scatter3(archive_xl(:, 1), archive_xl(:, 2), fl_archive, 20, 'r', 'filled' ); hold on;
 
 pause(1);
 

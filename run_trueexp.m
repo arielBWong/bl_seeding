@@ -24,153 +24,130 @@ addpath(problem_folder);
 problem_folder = strcat(pwd,'/transfer_utilities');
 addpath(problem_folder);
 
-problems = {'smd5mp(1, 1, 1)' , 'smd7mp(1, 1, 1)',  'smd8mp(1, 1, 1)', ...
+
+% tic;
+% blmapping_trueEvaldemo('smd7mp(1, 1, 1)',  2, 'use_seeding', true, 'seeding_strategy', 2);
+% toc;
+
+problem_sets = cell(1, 2);
+problem_sets{1} =  {'smd5mp(1, 1, 1)' , 'smd7mp(1, 1, 1)',  'smd8mp(1, 1, 1)', ...
     'smd1mp(1, 1, 1)' , 'smd2mp(1, 1, 1)',  'smd3mp(1, 1, 1)', ...
     'smd4mp(1, 1, 1)', 'smd6mp(1, 0, 1, 1)', };
 
+problem_sets{2} =  {'smd5mp(1, 2, 1)' , 'smd7mp(1, 2, 1)',  'smd8mp(1, 2, 1)', ...
+     'smd1mp(1, 2 , 1)' , 'smd2mp(1, 2, 1)',  'smd3mp(1, 2, 1)', ...
+     'smd4mp(1, 2, 1)', 'smd6mp(1, 0, 2, 1)', };
 
-% problems = {'smd5mp(1, 2, 1)' , 'smd7mp(1, 2, 1)',  'smd8mp(1, 2, 1)', ...
+
+
+thresholds = [0.7, 0.8, 0.9];
+tic;
+for its = 1:length(thresholds)
+    for ip = 1:length(problem_sets)
+        problems = problem_sets{ip};
+        seeds = 1:21;
+        ns = length(seeds);
+        np = length(problems);
+
+        % create parameter for each method
+        paras  = struct([]);
+
+        % method for cokrg
+        for i = 1 : np
+            for j = 1: ns
+                strc_id = (i-1) * ns + j;
+                paras(strc_id). problem_str = problems{i};
+                paras(strc_id). seed = seeds(j);
+                paras(strc_id). use_seeding = true;
+                paras(strc_id).seeding_strategy = 1;
+                paras(strc_id).threshold = thresholds(its);
+            end
+        end
+
+        % method close optimal
+        for i = 1 : np
+            for j = 1: ns
+                strc_id = (i-1) * ns + j + ns * np * 1;
+                paras(strc_id). problem_str = problems{i};
+                paras(strc_id). seed = seeds(j);
+                paras(strc_id). use_seeding = false;
+                paras(strc_id).seeding_strategy = 0;
+                paras(strc_id).threshold = thresholds(its);
+            end
+        end
+
+
+        nrun = length(paras);
+        parfor i = 1:nrun
+            blmapping_trueEvaldemo(paras(i).problem_str, paras(i).seed,...
+                'use_seeding', paras(i).use_seeding, 'seeding_strategy',  paras(i).seeding_strategy,...
+                'threshold', paras(i).threshold);
+
+        end
+    end
+end
+toc;
+
+
+
+problem_sets = cell(1, 1);
+problem_sets{1} =  {'smd5mp(1, 1, 1)' , 'smd7mp(1, 1, 1)',  'smd8mp(1, 1, 1)', ...
+    'smd1mp(1, 1, 1)' , 'smd2mp(1, 1, 1)',  'smd3mp(1, 1, 1)', ...
+    'smd4mp(1, 1, 1)', 'smd6mp(1, 0, 1, 1)', };
+
+% problem_sets{2} =  {'smd5mp(1, 2, 1)' , 'smd7mp(1, 2, 1)',  'smd8mp(1, 2, 1)', ...
 %     'smd1mp(1, 2 , 1)' , 'smd2mp(1, 2, 1)',  'smd3mp(1, 2, 1)', ...
 %     'smd4mp(1, 2, 1)', 'smd6mp(1, 0, 2, 1)', };
 
-% tic;
-blmapping_trueEvaldemo('smd7mp(1, 1, 1)',  1, 'use_seeding', true, 'seeding_strategy', 4);
-% toc;
-
-% % % problems = { 'smd8mp(1, 1, 1)'};
-% % --------
-seeds = 1: 21;
-ns = length(seeds);
-np = length(problems);
-% ------
-
-% create parameter for each method
-paras  = struct([]);
-
-% create parameter for the first method
-for i = 1 : np
-    for j = 1: ns
-        strc_id = (i-1) * ns + j;
-        paras(strc_id). problem_str = problems{i};
-        paras(strc_id). seed = seeds(j);
-        paras(strc_id). use_seeding = true;
-        paras(strc_id).seeding_strategy = 4;
-    end
-end
-
-% for i = 1 : np
-%     for j = 1: ns
-%         strc_id = (i-1) * ns + j + ns * np * 1;
-%         paras(strc_id). problem_str = problems{i};
-%         paras(strc_id). seed = seeds(j); 
-%         paras(strc_id). use_seeding = true;
-%         paras(strc_id).seeding_strategy = 2;
-%     end
-% end
-% 
-% 
-% % create parameter for the second method
-% for i = 1 : np
-%     for j = 1: ns
-%         strc_id = (i-1) * ns + j + ns * np * 2;
-%         paras(strc_id). problem_str = problems{i};
-%         paras(strc_id). seed = seeds(j);
-%         paras(strc_id). use_seeding = true;       % use local search
-%         paras(strc_id).seeding_strategy = 3 ;
-%     end
-% end
-% % 
-% % create parameter for the second method
-% for i = 1 : np
-%     for j = 1: ns
-%         strc_id = (i-1) * ns + j + ns * np * 3;
-%         paras(strc_id). problem_str = problems{i};
-%         paras(strc_id). seed = seeds(j);
-%         paras(strc_id). use_seeding = false;       % use local search
-%         paras(strc_id).seeding_strategy = 1 ;
-%     end
-% end
 
 
-
-nrun = length(paras);
-% 
+thresholds = [0.7, 0.8, 0.9];
 tic;
-parfor i = 1:nrun
-    blmapping_trueEvaldemo(paras(i).problem_str, paras(i).seed,...
-                             'use_seeding', paras(i).use_seeding, 'seeding_strategy',  paras(i).seeding_strategy);
-                        
+for its = 1:length(thresholds)
+    for ip = 1:length(problem_sets)
+        problems = problem_sets{ip};
+        seeds = 1:21;
+        ns = length(seeds);
+        np = length(problems);
+
+        % create parameter for each method
+        paras  = struct([]);
+
+        % method for cokrg
+        for i = 1 : np
+            for j = 1: ns
+                strc_id = (i-1) * ns + j;
+                paras(strc_id). problem_str = problems{i};
+                paras(strc_id). seed = seeds(j);
+                paras(strc_id). use_seeding = true;
+                paras(strc_id).seeding_strategy = 2;
+                paras(strc_id).threshold = thresholds(its);
+            end
+        end
+
+        % method close optimal
+        for i = 1 : np
+            for j = 1: ns
+                strc_id = (i-1) * ns + j + ns * np * 1;
+                paras(strc_id). problem_str = problems{i};
+                paras(strc_id). seed = seeds(j);
+                paras(strc_id). use_seeding = true;
+                paras(strc_id).seeding_strategy = 3;
+                paras(strc_id).threshold = thresholds(its);
+            end
+        end
+
+
+        nrun = length(paras);
+        parfor i = 1:nrun
+            blmapping_trueEvaldemo(paras(i).problem_str, paras(i).seed,...
+                'use_seeding', paras(i).use_seeding, 'seeding_strategy',  paras(i).seeding_strategy,...
+                'threshold', paras(i).threshold);
+
+        end
+    end
 end
 toc;
 
 
-
-
-problems = {'smd5mp(1, 2, 1)' , 'smd7mp(1, 2, 1)',  'smd8mp(1, 2, 1)', ...
-    'smd1mp(1, 2 , 1)' , 'smd2mp(1, 2, 1)',  'smd3mp(1, 2, 1)', ...
-    'smd4mp(1, 2, 1)', 'smd6mp(1, 0, 2, 1)', };
-% % --------
-
-seeds = 1:21;
-ns = length(seeds);
-np = length(problems);
-% ------
-
-% create parameter for each method
-paras  = struct([]);
-
-% create parameter for the first method
-for i = 1 : np
-    for j = 1: ns
-        strc_id = (i-1) * ns + j;
-        paras(strc_id). problem_str = problems{i};
-        paras(strc_id). seed = seeds(j);
-        paras(strc_id). use_seeding = true;
-        paras(strc_id).seeding_strategy = 4;
-    end
-end
-
-% 
-% for i = 1 : np
-%     for j = 1: ns
-%         strc_id = (i-1) * ns + j + ns * np * 1;
-%         paras(strc_id). problem_str = problems{i};
-%         paras(strc_id). seed = seeds(j); 
-%         paras(strc_id). use_seeding = true;
-%         paras(strc_id).seeding_strategy = 2;
-%     end
-% end
-% 
-% 
-% % 
-% % create parameter for the second method
-% for i = 1 : np
-%     for j = 1: ns
-%         strc_id = (i-1) * ns + j + ns *np * 2;
-%         paras(strc_id). problem_str = problems{i};
-%         paras(strc_id). seed = seeds(j);
-%         paras(strc_id). use_seeding = true;       % use local search
-%         paras(strc_id).seeding_strategy = 3;
-%     end
-% end
-% 
-% for i = 1 : np
-%     for j = 1: ns
-%         strc_id = (i-1) * ns + j + ns *np * 3;
-%         paras(strc_id). problem_str = problems{i};
-%         paras(strc_id). seed = seeds(j);
-%         paras(strc_id). use_seeding = false;       % use local search
-%         paras(strc_id).seeding_strategy = 0;
-%     end
-% end
-
-nrun = length(paras);
-% 
-tic;
-parfor i = 1:nrun
-    blmapping_trueEvaldemo(paras(i).problem_str, paras(i).seed,...
-                             'use_seeding', paras(i).use_seeding, 'seeding_strategy',  paras(i).seeding_strategy);
-                        
-end
-toc;
 
