@@ -96,8 +96,7 @@ for ip = 1 : param.popsize
     % (2) after reevaluation position changes (i.e. no more best solution in the population)
     if indx_reeval(1,1) == 0 && size(lowertrgdata_lastpop{1}, 1) < 500 
         indx_reeval(1) = 1;
-        
-        
+            
         xl_reeval = re_evaluation(prob, xu_lastpop(1, :), xl_lastpop(1, :), reparam); % always reevaluate top one
         
         extra_lowerEval = extra_lowerEval + reparam.popsize * (reparam.gen + 1) - 1;
@@ -176,9 +175,6 @@ for i = 1:m
     fprintf('gen %d, ind %d \n ', g, i);
     xui = xu(i, :);
 
-    if g == 3 && i == 14
-        a = 0;
-    end
     
     [match_xl, mdl, trgdata, lower_searchSwitchFlag] = llmatch_trueEvaluation(xui, prob, ...
         'archive_xu', upper_xu, 'archive_xl', lower_xl,...

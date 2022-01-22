@@ -45,11 +45,11 @@ x_trg{2,:} = expensive_x;
 y_trg{2,:} = expensive_f;
 
 % Fitting the cokring model
-% try
+try
     co_mdl = oodacefit(x_trg, y_trg);
-% catch ME
-    % a = 0;
-% end
+catch ME
+    co_mdl = replace_dace(expensive_x, expensive_f);
+end
 % [co_mdl, co_mdlparam] = cokrgmodel_building(x_trg, y_trg, prob);
 
 
@@ -84,7 +84,12 @@ else
     y_trg{2,:} = expensive_f;
 
     % re--Fitting the cokring model
-    co_mdl = oodacefit(x_trg, y_trg);
+    try
+        co_mdl = oodacefit(x_trg, y_trg);
+    catch ME
+        fprintf('--cokriging fails switch to replacement \n');
+        co_mdl = replace_dace(expensive_x, expensive_f);
+    end
 
     cokrg_lb = min(x_trg{2,:}, [], 1); % use cheap because it expensive overlaps with cheap
     cokrg_ub = max(x_trg{2,:}, [], 1);
@@ -95,7 +100,7 @@ else
     if onbound_check
         trgdata = 'place holder';
         match_xl = [];
-        lower_evalcount = lower_evalcount + 1; % one more evaluation 
+        lower_evalcount = lower_evalcount + 1;    % one more evaluation 
         localsearch_fail = true;
     else
         lower_evalcount = lower_evalcount + 1;
@@ -112,13 +117,14 @@ function [match_xl, lower_evalcount, trgdata]= cokrg_postprocess(cokrg_optxl, pr
 % existing one
 cokrg_optfl = prob.evaluate_l(xu, cokrg_optxl);
 if all(cokrg_optfl - expensive_f <= 0)
-    fprintf('cokrg starting point is better than all training  \n');
+    fprintf('cokrg starting point accepted  \n');
 else
     [~, id] = sort(expensive_f);
     cokrg_optxl = expensive_x(id(1), :);
 end
 
 % start local search from cokrging proposed point
+% the one more evaluation (i.e. cokrg_optfl) is counted in local search 
 [match_xl, lower_evalcount, x_visited, f_visited] = localsearch_withTransferredSolution(prob, xu, cokrg_optxl, maxFE, lower_evalcount);
 
 %  TO BE NOTED: in local search output.funcCount is not the same number
@@ -162,9 +168,9 @@ function [flag] = onbound_considerProblemBound(x, lb, ub, prob)
 flag_up = false;
 flag_down = false;
 
-x_norm = (x - prob.xl_bl)./(prob.xl_bu - prob.xl_bl);
-lb_norm = (lb - prob.xl_bl) ./(prob.xl_bu - prob.xl_bl);
-ub_norm = (ub - prob.xl_bl) ./(prob.xl_bu - prob.xl_bl);
+x_norm = (x - prob.xl_bl) ./ (prob.xl_bu - prob.xl_bl);
+lb_norm = (lb - prob.xl_bl) ./ (prob.xl_bu - prob.xl_bl);
+ub_norm = (ub - prob.xl_bl) ./ (prob.xl_bu - prob.xl_bl);
 
 prob_unorm = ones(1, prob.n_lvar);
 prob_lnorm = zeros(1, prob.n_lvar);
@@ -186,7 +192,7 @@ id_lb = check_lb < 1e-6;
 if any(id_lb > 0)
     check_probound = x_norm - prob_lnorm;
     if any(check_probound < 1e-6)
-        flag_up = false; % if the second time it is still on problem bound, then consider it not on bound
+        flag_up = false; % if the second time it is also on problem bound, then consider it not on bound
     else
         flag_up = true;
     end
