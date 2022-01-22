@@ -17,7 +17,8 @@ bd_funh = p.Results.bd_funh;
 %-----------------------------------------
 
 
-funh_obj = @(x)current_landscapeF(x, co_mdl);
+% funh_obj = @(x)current_landscapeF(x, co_mdl);
+funh_obj = @(x)current_landscapeF(x, co_mdl, prob);
 funh_con = @(x)noconstraint(x);
 
 num_xvar = prob.n_lvar;
@@ -35,9 +36,9 @@ end
 
 
 
-function [f] = current_landscapeF(x, mdl)
-
-[f,~] = mdl.predict(x);
+function [f] = current_landscapeF(x, mdl, prob)
+% x = (x - prob.xl_bl) ./ (prob.xl_bu - prob.xl_bl);
+[f, ~] = mdl.predict(x);
 end
 
 function c = noconstraint(x)

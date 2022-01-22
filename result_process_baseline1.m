@@ -3,18 +3,23 @@ problem_folder = strcat(pwd,'/problems/TP3');
 addpath(problem_folder);
 
 
-thr = 80;
-problems_2 = cell(1, 2);
+thr = 90;
+problems_2 = cell(1, 1);
 
-problems_2{1} = { 'smd1mp(1, 2, 1)' , 'smd2mp(1, 2, 1)',  'smd3mp(1, 2, 1)',  'smd4mp(1, 2, 1)', ....
-    'smd5mp(1, 2, 1)' , 'smd6mp(1, 0, 2, 1)', 'smd7mp(1, 2, 1)',  'smd8mp(1, 2, 1)'};
+problems_2{1} =  {'smd5(1, 2, 1)' , 'smd7(1, 2, 1)',  'smd8(1, 2, 1)', ...
+    'smd1(1, 2 , 1)' , 'smd2(1, 2, 1)',  'smd3(1, 2, 1)', ...
+    'smd4(1, 2, 1)', 'smd6(1, 0, 2, 1)', };
 
-problems_2{2} = { 'smd1mp(1, 1, 1)' , 'smd2mp(1, 1, 1)',  'smd3mp(1, 1, 1)',  'smd4mp(1, 1, 1)', ....
-     'smd5mp(1, 1, 1)', 'smd6mp(1, 0, 1, 1)', 'smd7mp(1, 1, 1)',  'smd8mp(1, 1, 1)'};
+
+% problems_2{1} = { 'smd1mp(1, 2, 1)' , 'smd2mp(1, 2, 1)',  'smd3mp(1, 2, 1)',  'smd4mp(1, 2, 1)', ....
+%     'smd5mp(1, 2, 1)' , 'smd6mp(1, 0, 2, 1)', 'smd7mp(1, 2, 1)',  'smd8mp(1, 2, 1)'};
+% 
+% problems_2{2} = { 'smd1mp(1, 1, 1)' , 'smd2mp(1, 1, 1)',  'smd3mp(1, 1, 1)',  'smd4mp(1, 1, 1)', ....
+%      'smd5mp(1, 1, 1)', 'smd6mp(1, 0, 1, 1)', 'smd7mp(1, 1, 1)',  'smd8mp(1, 1, 1)'};
 
 % methods = {'_baseline_ea', '_seeding_strategy_1', '_seeding_strategy_2', '_seeding_strategy_3'};
 
-for is = 1:2
+for is = 1:length(problems_2)
     methods = {'_baseline_ea', '_seeding_strategy_1', '_seeding_strategy_2', '_seeding_strategy_3'};
     problems = problems_2{is};
     prob_test = eval(problems{1});
@@ -26,13 +31,10 @@ for is = 1:2
     sigTestIndex = 4;  % refer to the newest algorithm which is 4 in this case
 
 
-    foldername = strcat('resultfolder_trueEval', num2str(nv), '_thr_', num2str(thr));
-   
+    foldername = strcat('resultfolder_trueEval', num2str(nv), '_thr_', num2str(thr));  
     resultfolder = fullfile(pwd, foldername);
 
-
     outfoldername = strcat('processedresult_trueEval', num2str(nv),'_thr_', num2str(thr));
-
     outfoldername = fullfile(pwd, outfoldername);
 
     if ~exist(outfoldername, 'dir')
@@ -40,7 +42,6 @@ for is = 1:2
     end
 
     accuracy_extraction(problems, methods, resultfolder, np, seed, mseed, sigTestIndex, outfoldername);
-    % accuracy_extractionExtension(problems, method, resultfolder, np, seed, mseed, sigTestIndex);
     FE_analysis(problems, methods, resultfolder, np, seed, mseed, sigTestIndex, outfoldername) ;
 
     methods = { '_seeding_strategy_2', '_seeding_strategy_3', };
@@ -61,6 +62,15 @@ function[] = switch_ratio(problems, methods, resultfolder, ns, median_ns, outfol
 % the first generation 
 % only work for strategy 2 and 3
 %----------
+
+prob = eval(problems{1});
+diff = 'mp';
+if contains(prob.name, diff)
+    prefix = 'smd_mp_';
+else
+    prefix = 'smd_';
+end
+
 
 np = length(problems);
 nm = length(methods);
@@ -95,7 +105,7 @@ for ip = 1:np
 end
 
 % write into files
-filename = strcat('globalSwitch_mean_nvar_', num2str(prob.n_lvar),'.csv');
+filename = strcat(prefix, 'globalSwitch_mean_nvar_', num2str(prob.n_lvar),'.csv');
 filename = fullfile(outfoldername, filename);
 fp = fopen(filename, 'w');
 fprintf(fp, 'problem/methods, ');
@@ -317,8 +327,16 @@ end
 
 function [] = FE_analysis(problems, method, resultfolder, np, seed, mseed, sigTestIndex, outfoldername) 
 
-nm = length(method);
+prob = eval(problems{1});
+diff = 'mp';
+if contains(prob.name, diff)
+    prefix = 'smd_mp_';
+else
+    prefix = 'smd_';
+end
 
+
+nm = length(method);
 FE_results2 = {};
 for m = 1:nm
     lowerFE  = zeros(np, seed);
@@ -338,7 +356,7 @@ for m = 1:nm
      FE_results2{m} = lowerFE;
 end
 
-filename = strcat('median_FE_nlvar_', num2str(prob.n_lvar),'.csv');
+filename = strcat(prefix, 'median_FE_nlvar_', num2str(prob.n_lvar),'.csv');
 filename = fullfile(outfoldername, filename);
 fp = fopen(filename, 'w');
 fprintf(fp, 'problems,');
@@ -373,6 +391,14 @@ nm = length(method);
 permethod_accuracy_up = {}; % upper save
 permethod_accuracy_down = {}; % lower save
 
+prob = eval(problems{1});
+diff = 'mp';
+if contains(prob.name, diff)
+    prefix = 'smd_mp_';
+else
+    prefix = 'smd_';
+end
+
 
 for m = 1:nm
     accuracy_up  = zeros(np, seed); % for one problem [problem, seed]
@@ -395,7 +421,9 @@ for m = 1:nm
     permethod_accuracy_down{m} = accuracy_low;
 end
 
-filename = strcat('median_accuracy_latex_nlvar_', num2str(prob.n_lvar),'.csv');
+
+
+filename = strcat(prefix, 'median_accuracy_latex_nlvar_', num2str(prob.n_lvar),'.csv');
 filename = fullfile(outfoldername, filename);
 fp = fopen(filename, 'w');
 fprintf(fp, 'problems,  baseline,  , transfer 1, , transfer 2, ,transfer 3, \n');
@@ -452,7 +480,7 @@ for i = 1:nm
     permethod_normAccuracy{i} = norm_accuracy((i-1)*np + 1: i*np, :);
 end
 
-filename = strcat('median_accuracy_Normlatex_', num2str(prob.n_lvar),'.csv');
+filename = strcat(prefix, 'median_accuracy_Normlatex_', num2str(prob.n_lvar),'.csv');
 filename = fullfile(outfoldername, filename);
 fp = fopen(filename, 'w');
 fprintf(fp, 'problems,  baseline, transfer 1, transfer 2,transfer 3, \n');

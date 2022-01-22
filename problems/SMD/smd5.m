@@ -14,6 +14,8 @@ classdef smd5
         lopt = 0;
         xu_prime = [0, 0];
         xl_prime = [1, 1, 0];
+        fu_prime;
+        fl_prime;
     end
     methods
         function obj = smd5(p, q, r)
@@ -44,6 +46,9 @@ classdef smd5
             xl_bu_2 = ones(1, obj.r) * 10.0;
             obj.xl_bl = [xl_bl_1, xl_bl_2];
             obj.xl_bu = [xl_bu_1, xl_bu_2];
+
+             obj.fu_prime = obj.uopt;
+            obj.fl_prime = obj.lopt;
             
         end
         

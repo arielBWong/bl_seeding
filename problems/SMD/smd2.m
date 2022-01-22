@@ -14,6 +14,8 @@ classdef smd2
         lopt = 0;
         xu_prime = [0, 0];
         xl_prime = [0, 0, 1];
+        fu_prime;
+        fl_prime;
     end
     methods
         function obj = smd2(p, q, r)
@@ -44,6 +46,9 @@ classdef smd2
             xl_bu_2 = ones(1, obj.r) * (exp(1));
             obj.xl_bl = [xl_bl_1, xl_bl_2];
             obj.xl_bu = [xl_bu_1, xl_bu_2];
+
+             obj.fu_prime = obj.uopt;
+            obj.fl_prime = obj.lopt;
             
         end
         

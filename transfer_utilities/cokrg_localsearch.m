@@ -45,7 +45,13 @@ x_trg{2,:} = expensive_x;
 y_trg{2,:} = expensive_f;
 
 % Fitting the cokring model
-co_mdl = oodacefit(x_trg, y_trg);
+% try
+    co_mdl = oodacefit(x_trg, y_trg);
+% catch ME
+    % a = 0;
+% end
+% [co_mdl, co_mdlparam] = cokrgmodel_building(x_trg, y_trg, prob);
+
 
 cokrg_lb = min(x_trg{2,:}, [], 1); % use cheap because it expensive overlaps with cheap
 cokrg_ub = max(x_trg{2,:}, [], 1);
@@ -126,7 +132,7 @@ function [flag] = onbound_withoutProblemBound(x, lb, ub, prob)
 % whether x is on boundary
 
 flag_up = false;
-flag_down = true;
+flag_down = false;
 
 x_norm = (x - prob.xl_bl)./(prob.xl_bu - prob.xl_bl);
 lb_norm = (lb - prob.xl_bl) ./(prob.xl_bu - prob.xl_bl);

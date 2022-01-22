@@ -30,10 +30,10 @@ rng(seed, 'twister');
 global prob
 prob = eval(prob_str);
  
-% existing = result_check(prob, seed, use_seeding,  seeding_strategy);
-% if existing
-%     return;
-% end
+existing = result_check(prob, seed, use_seeding,  seeding_strategy);
+if existing
+    return;
+end
 
 %------------------Process starts--------------------
 % insert global search
@@ -175,6 +175,10 @@ vis= false;
 for i = 1:m
     fprintf('gen %d, ind %d \n ', g, i);
     xui = xu(i, :);
+
+    if g == 3 && i == 14
+        a = 0;
+    end
     
     [match_xl, mdl, trgdata, lower_searchSwitchFlag] = llmatch_trueEvaluation(xui, prob, ...
         'archive_xu', upper_xu, 'archive_xl', lower_xl,...
