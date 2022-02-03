@@ -31,28 +31,18 @@ addpath(problem_folder);
 %     'smd1(1, 2 , 1)' , 'smd2(1, 2, 1)',  'smd3(1, 2, 1)', ...
 %     'smd4(1, 2, 1)', 'smd6(1, 0, 2, 1)', };
 
-tic;
-blmapping_trueEvaldemo('smd7(1, 1, 1)',  1, 'use_seeding', true, 'seeding_strategy', 2, 'threshold', 0);
-toc;
+% tic;
+% blmapping_trueEvaldemo('smd7(1, 1, 1)',  1, 'use_seeding', true, 'seeding_strategy', 2, 'threshold', 0);
+% toc;
 
 
-problem_sets = cell(1, 2);
-% problem_sets{1} =  {'smd5mp(1, 1, 1)' , 'smd7mp(1, 1, 1)',  'smd8mp(1, 1, 1)', ...
-%     'smd1mp(1, 1, 1)' , 'smd2mp(1, 1, 1)',  'smd3mp(1, 1, 1)', ...
-%     'smd4mp(1, 1, 1)', 'smd6mp(1, 0, 1, 1)', };
-%
-% problem_sets{2} =  {'smd5mp(1, 2, 1)' , 'smd7mp(1, 2, 1)',  'smd8mp(1, 2, 1)', ...
-%     'smd1mp(1, 2 , 1)' , 'smd2mp(1, 2, 1)',  'smd3mp(1, 2, 1)', ...
-%     'smd4mp(1, 2, 1)', 'smd6mp(1, 0, 2, 1)', };
+% problem_sets = cell(1, 1);
 
-%
+
 % problem_sets{1} =  {'smd5(1, 1, 1)' , 'smd7(1, 1, 1)',  'smd8(1, 1, 1)', ...
 %     'smd1(1, 1, 1)' , 'smd2(1, 1, 1)',  'smd3(1, 1, 1)', ...
 %     'smd4(1, 1, 1)', 'smd6(1, 0, 1, 1)', };
-% 
-% problem_sets{2} =  {'smd5(1, 2, 1)' , 'smd7(1, 2, 1)',  'smd8(1, 2, 1)', ...
-%     'smd1(1, 2 , 1)' , 'smd2(1, 2, 1)',  'smd3(1, 2, 1)', ...
-%     'smd4(1, 2, 1)', 'smd6(1, 0, 2, 1)', };
+
 % 
 % 
 % thresholds = [0];
@@ -105,9 +95,9 @@ problem_sets = cell(1, 2);
 
 
 problem_sets = cell(1, 1);
-problem_sets{1} =  {'smd5(1, 2, 1)' , 'smd7(1, 2, 1)',  'smd8(1, 2, 1)', ...
-    'smd1(1, 2 , 1)' , 'smd2(1, 2, 1)',  'smd3(1, 2, 1)', ...
-    'smd4(1, 2, 1)', 'smd6(1, 0, 2, 1)', };
+problem_sets{1} =  {'smd5(1, 1, 1)' , 'smd7(1, 1, 1)',  'smd8(1, 1, 1)', ...
+    'smd1(1, 1, 1)' , 'smd2(1, 1, 1)',  'smd3(1, 1, 1)', ...
+    'smd4(1, 1, 1)', 'smd6(1, 0, 1, 1)', };
 
 thresholds = [0, 0.1, 0.3, 0.5, 0.7, 0.9];
 tic;

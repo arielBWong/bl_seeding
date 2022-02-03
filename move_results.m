@@ -40,7 +40,7 @@ problem_sets{2} =  {'smd5mp(1, 2, 1)' , 'smd7mp(1, 2, 1)',  'smd8mp(1, 2, 1)', .
                     mkdir(target_subfolder_name);
                 end
                
-                % copyfile(source_subfolder_name, source_subfolder_name);
+                copyfile(source_subfolder_name, target_subfolder_name);
                 
                 
             end
