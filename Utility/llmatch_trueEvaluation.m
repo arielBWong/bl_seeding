@@ -124,6 +124,7 @@ if ~isempty(archive_xu) && seeding_only % first generation on the upper level us
             % retrieve ID
             [~,~, close_id] = retrieve_neighbour(xu, lower_trg, archive_xu, archive_xl);
             close_optxl =  archive_xl(close_id, :);
+            close_optxu = archive_xu(close_id, :);
             [match_xl, ~, history, output] = lowerlevel_fmincon(close_optxl, maxFE, prob.xl_bl, prob.xl_bu, funh_obj, funh_con);
             
             % record training data and evaluation usage
@@ -131,6 +132,23 @@ if ~isempty(archive_xu) && seeding_only % first generation on the upper level us
                               history.x, history.fval];                          
              lower_eval = lower_eval + size(expensive_x, 1) + output.funcCount; 
               lower_searchSwitchFlag = 1;
+              
+              
+              if visualization
+                  neighbor_f =prob.evaluate_l(close_optxu, close_optxl);
+                  neighbor_optxl = prob.get_xlprime(close_optxu);
+                  neighbor_optf = prob.evaluate_l(close_optxu, neighbor_optxl);
+                  
+                  
+                  current_f = prob.evaluate_l(xu, match_xl);
+                  current_optxl = prob.get_xlprime(xu);
+                  current_optf = prob.evaluate_l(xu, current_optxl);
+                  
+                 %  if  abs(neighbor_f - neighbor_optf) < 0.5 &&  abs(current_f -current_optf) > 1
+                 %     plot2d_withNeighbor(xu, prob.xl_bl, prob.xl_bu, match_xl, close_optxl, prob, close_optxu)
+                  % end
+              end
+              
              return;
         else
             initmatrix = expensive_x;
