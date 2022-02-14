@@ -3,7 +3,7 @@ problem_folder = strcat(pwd,'/problems/TP3');
 addpath(problem_folder);
 
 
-thr = 0;
+thr =50;
 problems_2 = cell(1, 1);
 
 % problems_2{1} =  { 'smd1(1, 2 , 1)' , 'smd2(1, 2, 1)',  'smd3(1, 2, 1)', ...
@@ -14,29 +14,29 @@ problems_2 = cell(1, 1);
 
 
 % problems_2{1} = {'smd1(1, 2 , 1)' , 'smd2(1, 2, 1)',  'smd3(1, 2, 1)', ...
-%                  'smd4(1, 2, 1)','smd5(1, 2, 1)' , 'smd6(1, 0, 2, 1)', 'smd7(1, 2, 1)', 'smd8(1, 2, 1)',...
-%                  'smd1mp(1, 2, 1)' , 'smd2mp(1, 2, 1)',  'smd3mp(1, 2, 1)',  'smd4mp(1, 2, 1)', ....
-%                 'smd5mp(1, 2, 1)' , 'smd6mp(1, 0, 2, 1)', 'smd7mp(1, 2, 1)',  'smd8mp(1, 2, 1)'};
+%                   'smd4(1, 2, 1)','smd5(1, 2, 1)' , 'smd6(1, 0, 2, 1)', 'smd7(1, 2, 1)', 'smd8(1, 2, 1)',...
+%                   'smd1mp(1, 2, 1)' , 'smd2mp(1, 2, 1)',  'smd3mp(1, 2, 1)',  'smd4mp(1, 2, 1)', ....
+%                  'smd5mp(1, 2, 1)' , 'smd6mp(1, 0, 2, 1)', 'smd7mp(1, 2, 1)',  'smd8mp(1, 2, 1)'};
 
 
 % problems_2{1} = { 'smd1(1, 1, 1)' , 'smd2(1, 1, 1)',  'smd3(1, 1, 1)', ...
-%       'smd4(1, 1, 1)', 'smd5(1, 1, 1)' , 'smd6(1, 0, 1, 1)',  'smd7(1, 1, 1)', ...
-%       'smd8(1, 1, 1)',...
-%      'smd1mp(1, 1, 1)' , 'smd2mp(1, 1, 1)',  'smd3mp(1, 1, 1)',  'smd4mp(1, 1, 1)', ....
-%       'smd5mp(1, 1, 1)', 'smd6mp(1, 0, 1, 1)', 'smd7mp(1, 1, 1)',  'smd8mp(1, 1, 1)'};
+ %      'smd4(1, 1, 1)', 'smd5(1, 1, 1)' , 'smd6(1, 0, 1, 1)',  'smd7(1, 1, 1)', ...
+ %      'smd8(1, 1, 1)',...
+ %     'smd1mp(1, 1, 1)' , 'smd2mp(1, 1, 1)',  'smd3mp(1, 1, 1)',  'smd4mp(1, 1, 1)', ....
+  %     'smd5mp(1, 1, 1)', 'smd6mp(1, 0, 1, 1)', 'smd7mp(1, 1, 1)',  'smd8mp(1, 1, 1)'};
 % 
+% 
+% problems_2{1} = {'smd1mp(1, 1, 1)' , 'smd2mp(1, 1, 1)',  'smd3mp(1, 1, 1)',  'smd4mp(1, 1, 1)', ....
+% 'smd5mp(1, 1, 1)', 'smd6mp(1, 0, 1, 1)', 'smd7mp(1, 1, 1)',  'smd8mp(1, 1, 1)'};
 
-problems_2{1} = {'smd1mp(1, 1, 1)' , 'smd2mp(1, 1, 1)',  'smd3mp(1, 1, 1)',  'smd4mp(1, 1, 1)', ....
-     'smd5mp(1, 1, 1)', 'smd6mp(1, 0, 1, 1)', 'smd7mp(1, 1, 1)',  'smd8mp(1, 1, 1)'};
 
-
-% problems_2{1} = {'smd1mp(1, 2, 1)' , 'smd2mp(1, 2, 1)',  'smd3mp(1, 2, 1)',  'smd4mp(1, 2, 1)', ....
-%               'smd5mp(1, 2, 1)' , 'smd6mp(1, 0, 2, 1)', 'smd7mp(1, 2, 1)',  'smd8mp(1, 2, 1)'};
+problems_2{1} = {'smd1mp(1, 2, 1)' , 'smd2mp(1, 2, 1)',  'smd3mp(1, 2, 1)',  'smd4mp(1, 2, 1)', ....
+              'smd5mp(1, 2, 1)' , 'smd6mp(1, 0, 2, 1)', 'smd7mp(1, 2, 1)',  'smd8mp(1, 2, 1)'};
 
 % methods = {'_baseline_ea', '_seeding_strategy_1', '_seeding_strategy_2', '_seeding_strategy_3'};
 
 for is = 1:length(problems_2)
-    methods = { '_seeding_strategy_2',  '_seeding_strategy_3'};
+    methods = {'_baseline_ea', '_seeding_strategy_1', '_seeding_strategy_3'};
     problems = problems_2{is};
     prob_test = eval(problems{1});
     nv = prob_test.n_lvar;
@@ -44,7 +44,7 @@ for is = 1:length(problems_2)
     np = length(problems);
     seed = 21;
     mseed = 11;
-    sigTestIndex = 2;  % refer to the newest algorithm which is 4 in this case
+    sigTestIndex = 3;  % refer to the newest algorithm which is 4 in this case
 
 
     foldername = strcat('resultfolder_trueEval', num2str(nv), '_thr_', num2str(thr));  
@@ -57,9 +57,10 @@ for is = 1:length(problems_2)
         mkdir(outfoldername);
     end
 
-    % accuracy_extraction(problems, methods, resultfolder, np, seed, mseed, sigTestIndex, outfoldername);
+    %accuracy_extraction(problems, methods, resultfolder, np, seed, mseed, sigTestIndex, outfoldername);
 
-    methods = { '_seeding_strategy_2',  '_seeding_strategy_3'};
+    %methods = { '_seeding_strategy_2',  '_seeding_strategy_3'};
+   methods = {  '_seeding_strategy_3'};
     FE_analysis(problems, methods, resultfolder, np, seed, mseed, outfoldername) ;
 
     % methods = { '_seeding_strategy_2', '_seeding_strategy_3', };
@@ -558,53 +559,53 @@ fprintf(fp, '\n');
 
 for i = 1:np
     prob = eval(problems{i});
-    % fprintf(fp, '%s &,', prob.name);
-    
+    fprintf(fp, '%s &,', prob.name);
+%     
+    [~, id] = sort(FE_results2{1}(i, :));
+    nx = id(mseed);
+    fe1 =  FE_results2{1}(i, nx);
+%     
+%     
+%     [~, id] = sort(FE_results2{2}(i, :));
+%     nx = id(mseed);
+%     fe2 =  FE_results2{2}(i, nx);
+%     
+%     [~, id] = sort(FE_results2{3}(i, :));
+%     nx = id(mseed);
+%     fe3 =  FE_results2{3}(i, nx);
+%     
+%     fe = [fe1, fe2, fe3];
+%     [~, idx] = sort(fe);
     for j = 1:nm
-
-        if j == 1
-            [~, id] = sort(FE_results2{j}(i, :));
-            nx = id(mseed);
-            fe2 =  FE_results2{j}(i, nx);
-           
-
-            [~, id] = sort(FE_results2{j+1}(i, :));
-            nx = id(mseed);
-            fe3 =  FE_results2{j+1}(i, nx);
-           
-
-            if fe2 < fe3
-                fprintf(fp, '\\textbf{%d} & , ', fe2);
-            else
-                fprintf(fp, '%d & , ', fe2);
-            end
-        end
-
-
-         if j == 2
-            [~, id] = sort(FE_results2{j}(i, :));
-            nx = id(mseed);
-            fe3 =  FE_results2{j}(i, nx);
-           
-
-            [~, id] = sort(FE_results2{j-1}(i, :));
-            nx = id(mseed);
-            fe2 =  FE_results2{j-1}(i, nx);
-           
-
-            if fe3 < fe2
-                fprintf(fp, '\\textbf{%d} & , ', fe3);
-            else
-                fprintf(fp, '%d & , ', fe3);
-            end
+        
+        if j==1
+             fprintf(fp, '& %d & , ', fe1);
         end
         
 %         if j == 1
-%             [~, id] = sort(FE_results2{j}(i, :));
-%             nx = id(mseed);
-%             fprintf(fp, '%d &, ', FE_results2{j}(i, nx));
+%             fprintf(fp, '5E5 & , ');
 %         end
-       
+%         
+%         
+%         if j == 2
+%           %   if idx(1) ==j
+%              %   fprintf(fp, '\\textbf{%d} & , ', fe2);
+%            % else
+%                 fprintf(fp, '%d & , ', fe2);
+%             %end
+%         end
+%         
+%         
+%          if j == 3
+%            % if idx(1) ==j
+%                %  fprintf(fp, '\\textbf{%d} & , ', fe3);
+%             %else
+%                 fprintf(fp, '%d & , ', fe3);
+%             %end
+%         end
+%         
+        
+        
     end
     % fprintf(fp, '\\\\\n');
     fprintf(fp, '\n');
@@ -655,69 +656,79 @@ end
 filename = strcat(prefix, 'median_accuracy_latex_nlvar_', num2str(prob.n_lvar),'.csv');
 filename = fullfile(outfoldername, filename);
 fp = fopen(filename, 'w');
-fprintf(fp, 'problems, decision and cokring, , decision and neighbour optimal, sig \n');
+fprintf(fp, 'problems, EA, , NEST, , CEST, , sig \n');
 
 for i = 1:np
     prob = eval(problems{i});
     fprintf(fp, '& %s &,', prob.name);
     
+    [~, id] = sort(permethod_accuracy_up{1}(i, :));
+    nx = id(mseed);
+    ula1 =  permethod_accuracy_up{1}(i, nx);
+    lla1 =  permethod_accuracy_down{1}(i, nx);
+    
+    % only suits 2 methods situation
+    [~, id] = sort(permethod_accuracy_up{2}(i, :));
+    nx = id(mseed);
+    ula2 =  permethod_accuracy_up{2}(i, nx);
+    lla2 =  permethod_accuracy_down{2}(i, nx);
+    
+    % only suits 3  methods situation
+    [~, id] = sort(permethod_accuracy_up{3}(i, :));
+    nx = id(mseed);
+    ula3 =  permethod_accuracy_up{3}(i, nx);
+    lla3 =  permethod_accuracy_down{3}(i, nx);
+    
+    ula = [ula1, ula2, ula3];
+    lla = [lla1, lla2, lla3];
+    
+    [~, idxul] = sort(ula);
+    [~, idxll] = sort(lla);
+    
     for j = 1:nm
        
         
         if j == 1
-            [~, id] = sort(permethod_accuracy_up{j}(i, :));
-            nx = id(mseed);
-            ula1 =  permethod_accuracy_up{j}(i, nx);
-            lla1 =  permethod_accuracy_down{j}(i, nx);
-      
-            % only suits 2 methods situation
-            [~, id] = sort(permethod_accuracy_up{j+1}(i, :));
-            nx = id(mseed);
-            ula2 =  permethod_accuracy_up{j+1}(i, nx);
-            lla2 =  permethod_accuracy_down{j+1}(i, nx);
-
-            if ula1 < ula2
+            if idxul(1) ==j
                 fprintf(fp, '\\textbf{%0.4f} & , ', ula1);
             else
                 fprintf(fp, '%0.4f & , ', ula1);
             end
             
-            if lla1 < lla2
+            if idxll(1) ==j
                 fprintf(fp, '\\textbf{%0.4f} & , ', lla1);
             else
                 fprintf(fp, '%0.4f & , ', lla1);
             end
-
-
         end
 
         if j == 2
-            [~, id] = sort(permethod_accuracy_up{j}(i, :));
-            nx = id(mseed);
-            ula2 =  permethod_accuracy_up{j}(i, nx);
-            lla2 =  permethod_accuracy_down{j}(i, nx);
-
-
-
-            [~, id] = sort(permethod_accuracy_up{j-1}(i, :));
-            nx = id(mseed);
-            ula1 =  permethod_accuracy_up{j-1}(i, nx);
-            lla1 =  permethod_accuracy_down{j-1}(i, nx);
-
-            if ula2 < ula1
+            if idxul(1) ==j
                 fprintf(fp, '\\textbf{%0.4f} & , ', ula2);
             else
                 fprintf(fp, '%0.4f & , ', ula2);
             end
             
-            if lla2 < lla1
+            if idxll(1) ==j
                 fprintf(fp, '\\textbf{%0.4f} & , ', lla2);
             else
                 fprintf(fp, '%0.4f & , ', lla2);
             end
-
         end
         
+        if j == 3
+            if idxul(1) ==j
+                fprintf(fp, '\\textbf{%0.4f} & , ', ula3);
+            else
+                fprintf(fp, '%0.4f & , ', ula3);
+            end
+            
+            if idxll(1) ==j
+                fprintf(fp, '\\textbf{%0.4f} & , ', lla3);
+            else
+                fprintf(fp, '%0.4f & , ', lla3);
+            end
+        end
         
         
         
@@ -727,8 +738,8 @@ for i = 1:np
         if j == sigTestIndex  % accuracy smaller the better
             % 1 means  the former is smaller,  second is bigger/better, 
             % for hv comparison larger the better
-            [p1, h1, stats1] = ranksum( permethod_accuracy_up{j}(i, :), permethod_accuracy_up{j-1}(i, :),  'alpha', 0.05, 'tail', 'left');      
-            [p2, h2, stats2] = ranksum( permethod_accuracy_up{j-1}(i, :), permethod_accuracy_up{j}(i, :),  'alpha', 0.05, 'tail', 'left');    
+            [p1, h1, stats1] = ranksum( permethod_accuracy_up{j}(i, :), permethod_accuracy_up{j-2}(i, :),  'alpha', 0.05, 'tail', 'left');      
+            [p2, h2, stats2] = ranksum( permethod_accuracy_up{j-2}(i, :), permethod_accuracy_up{j}(i, :),  'alpha', 0.05, 'tail', 'left');    
             if h1 == 1 && h2 == 0               
                 fprintf(fp, '$\\uparrow$, ');               
             elseif h2==1 && h1 == 0
