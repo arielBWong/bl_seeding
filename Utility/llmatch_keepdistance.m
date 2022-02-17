@@ -33,33 +33,33 @@ pred_fl = p.Results.pred_fl;
 pred_mu = p.Results.pred_mu;
 %--------
 
-prob                 = llmatch_p.prob;
-num_pop              = llmatch_p.num_pop;
-num_gen              = llmatch_p.num_gen;
-propose_nextx        = llmatch_p.egostr;
-init_size            = llmatch_p.egoinitsize;
-iter_size            = llmatch_p.egoitersize;
-norm_str             = llmatch_p.egofnormstr;
-localsearch          = llmatch_p.localsearch;
-method               = llmatch_p.method;
-seed                 = llmatch_p.seed;
-maxFE_l           = llmatch_p.maxFE_l;
+prob  = llmatch_p.prob;
+num_pop = llmatch_p.num_pop;
+num_gen  = llmatch_p.num_gen;
+propose_nextx  = llmatch_p.egostr;
+init_size = llmatch_p.egoinitsize;
+iter_size = llmatch_p.egoitersize;
+norm_str = llmatch_p.egofnormstr;
+localsearch  = llmatch_p.localsearch;
+method = llmatch_p.method;
+seed = llmatch_p.seed;
+maxFE_l = llmatch_p.maxFE_l;
 
 flag = -1;
 global distance_check
 global distance_checkN
-l_nvar           = prob.n_lvar;
-upper_bound      = prob.xl_bu;
-lower_bound      = prob.xl_bl;
-xu_init          = repmat(xu, init_size, 1);
+l_nvar = prob.n_lvar;
+upper_bound = prob.xl_bu;
+lower_bound = prob.xl_bl;
+xu_init = repmat(xu, init_size, 1);
 
 %-- lower level initialization
 if ~isempty(lower_archive)                % for lower level archive 
-    train_xl        = lower_archive.init_xl;
+    train_xl = lower_archive.init_xl;
 else
-    train_xl        = lhsdesign(init_size,l_nvar,'criterion','maximin','iterations',1000);
-    train_xl        = repmat(lower_bound, init_size, 1) ...
-                           + repmat((upper_bound - lower_bound), init_size, 1) .* train_xl;
+    train_xl = lhsdesign(init_size,l_nvar,'criterion','maximin','iterations',1000);
+    train_xl  = repmat(lower_bound, init_size, 1) ...
+                 + repmat((upper_bound - lower_bound), init_size, 1) .* train_xl;
 end
 
 % include seeding xl
@@ -117,8 +117,7 @@ lower_archive.init_fl = [lower_archive.init_fl; train_fl'];
 
 
 % decide whether skip infill steps
-if ~isempty(lower_archive) && ~isempty(archive)  % when archive is passed in, means can do closeness check
-    
+if ~isempty(lower_archive) && ~isempty(archive)  % when archive is passed in, means can do closeness check   
     dist  = pdist2(xu , archive.xu);             % this xu is upper level new infill xu, not added into archive
     [~, idx] = sort(dist);
     r = corr(train_fl, lower_archive.init_fl(idx(1), :)');
@@ -140,10 +139,10 @@ if ~isempty(lower_archive) && ~isempty(archive)  % when archive is passed in, me
     if r>0.95 % skip infill
  
         maxFE = maxFE_l - init_size ;
-        [seed_fl, seed_fc]            = prob.evaluate_l(xu, seed_xl);
-        [match_xl, ~, num_eval]       = ll_localsearch(seed_xl, seed_fl, seed_fc, true, xu, prob, maxFE);
+        [seed_fl, seed_fc]  = prob.evaluate_l(xu, seed_xl);
+        [match_xl, ~, num_eval] = ll_localsearch(seed_xl, seed_fl, seed_fc, true, xu, prob, maxFE);
         n_fev = num_eval + 1;
-        [match_fl, match_cl]          = prob.evaluate_l(xu, match_xl);     % additional lazy step, can be extracted from local search results
+        [match_fl, match_cl]   = prob.evaluate_l(xu, match_xl);     % additional lazy step, can be extracted from local search results
         additional_searchxl           = [seed_xl; match_xl];               % variable name from copy paste
         additional_searchfl           = [seed_fl; match_fl];
         additional_searchcl           = [seed_fc; match_cl];

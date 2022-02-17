@@ -1,4 +1,4 @@
-function[match_xl, mdl, trgdata, lower_searchSwitchFlag] = llmatch_trueEvaluation(upper_xu, prob, xl_probe, varargin)
+function[match_xl, mdl, trgdata, lower_searchSwitchFlag] = llmatch_egoEvaluation(upper_xu, prob, xl_probe, varargin)
 % method of searching for a match xl for xu.
 % Problem(Prob) definition require certain formation for bilevel problems
 % evaluation method should be of  form 'evaluation_l(xu, xl)'
@@ -135,18 +135,17 @@ if ~isempty(archive_xu) && seeding_only % first generation on the upper level us
               
               
               if visualization
-                  neighbor_f =prob.evaluate_l(close_optxu, close_optxl);
+                  neighbor_f = prob.evaluate_l(close_optxu, close_optxl);
                   neighbor_optxl = prob.get_xlprime(close_optxu);
                   neighbor_optf = prob.evaluate_l(close_optxu, neighbor_optxl);
-                  
-                  
+                             
                   current_f = prob.evaluate_l(xu, match_xl);
                   current_optxl = prob.get_xlprime(xu);
                   current_optf = prob.evaluate_l(xu, current_optxl);
                   
                  %  if  abs(neighbor_f - neighbor_optf) < 0.5 &&  abs(current_f -current_optf) > 1
                  %     plot2d_withNeighbor(xu, prob.xl_bl, prob.xl_bu, match_xl, close_optxl, prob, close_optxu)
-                  % end
+                 %  end
               end
               
              return;
@@ -164,23 +163,43 @@ end
 % insert global search
 % run to here means transfer fails or first generation
 
-param.gen = 19;                    % design problem of gsolver, it should be 20
-param.popsize = 50;
-lb = prob.xl_bl;
-ub = prob.xl_bu;
+% param.gen = 19;                    % design problem of gsolver, it should be 20
+% param.popsize = 50;
+% lb = prob.xl_bl;
+% ub = prob.xl_bu;
+% num_xvar = prob.n_lvar;
+% % initmatrix is set early in this method;
+% 
+% [best_x, best_f, best_c, archive_search, ~] = gsolver(funh_obj, num_xvar, lb, ub, initmatrix, funh_con, param, 'visualize', false);
+
+% apply believer Kriging
+param.maxFE = 50;
+param.initsize = 20;
 num_xvar = prob.n_lvar;
-% initmatrix is set early in this method;
+ [best_x, best_f, best_c, archive_search] = ego_solver(funh_obj, num_xvar, prob.xl_bl, prob.xl_bu, initmatrix, funh_con, param, 'visualize', false); 
 
-[best_x, best_f, best_c, archive_search, ~] = gsolver(funh_obj, num_xvar, lb, ub, initmatrix, funh_con, param, 'visualize', false);
-
-
-
-
-lower_eval = lower_eval + (param.gen + 1) * param.popsize - size(initmatrix, 1); 
-match_xl = best_x;
+ % follow local search
+ local_FE = 50;
+ % attach a local search
+  [xsol, ~,history, output] = lowerlevel_fmincon(best_x, local_FE, prob.xl_bl, prob.xl_bu,funh_obj, funh_con);
+ localdata = [history.x, history.fval];
+ 
+ 
+ % recordings
+lower_eval = lower_eval +param.maxFE - size(initmatrix, 1) + output.funcCount; 
+match_xl = xsol;
 trgdata = [archive_search.sols(:, 2: prob.n_lvar + 1), archive_search.sols(:, prob.n_lvar + 2: end)];
+trgdata = [trgdata; localdata];
 
 
+% test visualization 
+%archive_xu = xu;
+% archive_xl = match_xl;
+% lower_trg{1} = trgdata;
+ % [expensive_x, expensive_f, cheap_x, cheap_f, correlation] = ...
+ %           cokrg_trainingSampleExtension(xu, prob, archive_xu, archive_xl,  lower_trg, cokrg_samplesize);
+
+ 
 end
 
 
@@ -197,75 +216,5 @@ end
 function [c, ce] = constraint_func(prob, xu, xl)
 c = [];
 ce = [];
-end
-
-function hitoptimal = hitoptimal_check(xu, xl, prob)
-% function to check whehter x is in the vicinity of optimal
-% 
-
-ideal_xl = prob.get_xlprime(xu);
-
-ideal_xl = (ideal_xl - prob.xl_bl)./(prob.xl_bu - prob.xl_bl);
-xl = (xl - prob.xl_bl) ./ (prob.xl_bu - prob.xl_bl);
-
-d = sqrt(sum((ideal_xl - xl).^2, 2));
-
-if d < 0.01
-    hitoptimal = true;
-else
-    hitoptimal = false;
-end
-
-end
-
-function hitoptimal = hitoptimal_check2(xu, xl, prob)
-% function to check whehter x is in the vicinity of optimal
-% 
-
-ideal_xl = prob.get_xlprime(xu);
-
-ideal_xl = (ideal_xl - prob.xl_bl)./(prob.xl_bu - prob.xl_bl);
-xl = (xl - prob.xl_bl) ./ (prob.xl_bu - prob.xl_bl);
-
-d = sqrt(sum((ideal_xl - xl).^2, 2));
-
-if d < 0.1
-    hitoptimal = true;
-else
-    hitoptimal = false;
-end
-
-end
-
-
-function which_localoptimal = checkwhich_localoptimal(xu, xl, prob)
-% when this function is called, we already know that xl is local optimal
-% 
-othercenters = mp_othercenters(prob, xu);
-
-[~, I] = pdist2(othercenters, xl, 'euclidean', 'Smallest', 1);
-if I == 1 || I == 2
-    which_localoptimal = 1; % forward and backward   
-end
-
-if I == 3 || I == 4
-    which_localoptimal = 3; % left and right
-end
-
-end
-
-function whetherBoundary = checkwhether_hitboundary(xl_startingpoint, xl_bl, xl_bu)
-% when this function is called, we already know that xl is local optimal
-whetherBoundary = 1;
-if any( abs(xl_startingpoint - xl_bl) < 1e-3)
-    whetherBoundary = 2;
-    return;
-end
-
-if any(abs(xl_bu - xl_startingpoint) < 1e-3)
-    whetherBoundary = 2;
-    return
-end
-
 end
 
