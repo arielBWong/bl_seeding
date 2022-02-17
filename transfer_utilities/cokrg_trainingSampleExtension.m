@@ -26,9 +26,15 @@ seed_xu = archive_xu(close_id, :);
 
 sigma = covariation(close_xlarchive, seed_xl);
 nc = size(close_xlarchive, 1);
+nc = 1000;
+
 % https://au.mathworks.com/help/matlab/ref/std.html
 std_2 = sum( (close_xlarchive - seed_xl) .* (close_xlarchive - seed_xl), 1 )/ (nc - 1);  % sum over each element
 std_2 = sqrt(std_2);
+
+
+
+
 
 xl_samplesIn = [];
 xl_samplesOut = [];
@@ -75,7 +81,8 @@ while size(xl_samples, 1) < ns
     
     xl_samples = [xl_samplesIn(1:int16(samplesize/2), :); xl_samplesOut(1:int16(samplesize/2), :)];
     % check on which dimension  with std will violate boundary
-   
+    
+
     check_upperbound = (seed_xl + std_2) >  prob.xl_bu;
     check_lowerbound = (seed_xl - std_2) < prob.xl_bl;
 
@@ -121,6 +128,8 @@ for i = 1:bound_count
     expensive_x = [expensive_x; xl_samples(end - i+1, :)];
 end
 
+ % create visualization, 
+visualize_std(seed_xl, std_2, prob, xu, expensive_x,  lower_searchdata_cly{close_id}(:, 1:end-1) );    
 
 
 xuu = repmat(xu, ns, 1);
@@ -191,6 +200,39 @@ scatter3(archive_xl(:, 1), archive_xl(:, 2), fl_archive, 20, 'r', 'filled' ); ho
 
 pause(1);
 
+
+end
+
+function visualize_std(mean, std, prob, xu, samplex, archivex)
+
+fighn = figure(1);
+
+nt = 100;
+tst1 = linspace(prob.xl_bl(1), prob.xl_bu(1), nt);
+tst2 = linspace(prob.xl_bl(2), prob.xl_bu(2), nt);
+
+tst11 = meshgrid(tst1);
+tst22 = meshgrid(tst2);
+
+tst11L = tst11(:);
+tst22L = tst22(:);
+
+xuu = repmat(xu, size(tst11L, 1), 1);
+truef = prob.evaluate_l(xuu, [tst11L, tst22L]);
+truef = reshape(truef, [nt, nt]);
+
+[M,c] = contour(tst1, tst2, truef); hold on;
+c.LineWidth = 3;
+scatter(mean(1), mean(2),  180, [0.9290 0.6940 0.1250], 'filled'); hold on;
+
+lower_point = mean - std;
+rectangle('Position', [lower_point, std(1)*2, std(2)*2]);
+
+scatter(archivex(:, 1), archivex(:, 2), 200, 'g', 'filled'); hold on;
+scatter(samplex(:, 1), samplex(:, 2), 120, 'r', 'filled'); hold on;
+
+pause(0.5);
+close(fighn);
 
 end
 
