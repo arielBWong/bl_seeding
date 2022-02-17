@@ -34,11 +34,13 @@ if isstruct(output) % customized
     A_pop   = output.addon;
     Mdl_pop = output.mdl;
     trg_pop = output.trgdata;
+    switch_lls = output.lower_searchSwitchFlag;
 else
     F_pop   = output;
     A_pop   = [];
     Mdl_pop = {};
     trg_pop = {};
+    switch_lls = []; 
 end
 
 C_pop     = funh_con(X_pop);
@@ -66,6 +68,12 @@ if isempty(trg_pop)
     pop.trgdata = {};
 else
     pop.trgdata = trg_pop(ids);
+end
+
+if isempty(switch_lls)
+    pop.switch_lls = {};
+else
+    pop.switch_lls = switch_lls(ids);
 end
 
 

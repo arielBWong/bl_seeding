@@ -26,10 +26,10 @@ numobj = size(f, 2);
 
 if numcon == 0                                                  % unconstraint problem
     sc = [];
-    if numobj > 1                                               % mo problem
+    if numobj > 1                                                  % mo problem
         [~, ids, ~] = nd_sort(f, (1:size(f, 1))');
-    else                                                        % so problem
-        [~, ids] = sort(f);                                     % acending sort/minimization
+    else                                                                 % so problem
+        [~, ids] = sort(f);                                          % acending sort/minimization
     end
     sf = f(ids, :);
     sx = x(ids, :);

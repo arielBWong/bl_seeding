@@ -17,16 +17,18 @@ child.X=cx;
 % This is NSGA-II
 output = funh_obj(child.X);
 
-if isstruct(output)
+if isstruct(output)     % cumstomized   
     child.F = output.f;
     child.A = output.addon;
     child.Mdl = output.mdl;
     child.trgdata = output.trgdata;
+    child.switch_lls = output.lower_searchSwitchFlag;
 else
     child.F = output;
     child.A = [];
     child.Mdl = {};
     child.trgdata = {};
+     child.switch_lls = [];
 end
 
 
@@ -39,11 +41,13 @@ archive.sols=[archive.sols;[repmat(gen,param.popsize,1), child.X, child.F, child
 pop.X = [pop.X; child.X];
 pop.F = [pop.F; child.F];
 pop.C = [pop.C; child.C];
-pop.A = [pop.A; child.A];
-pop.Mdl = [pop.Mdl, child.Mdl]; % deliminator is ,
+pop.A = [pop.A; child.A];   % add on
+pop.Mdl = [pop.Mdl, child.Mdl]; 
 pop.trgdata = [pop.trgdata, child.trgdata];
+pop.switch_lls = [pop.switch_lls, child.switch_lls];
 
-[pop.F, pop.X, pop.C, pop.A, pop.Mdl, pop.trgdata] = pop_sort(pop.F, pop.X, pop.C, pop.A, pop.Mdl, pop.trgdata);
+% [pop.F, pop.X, pop.C, pop.A, pop.Mdl, pop.trgdata] = pop_sort(pop.F, pop.X, pop.C, pop.A, pop.Mdl, pop.trgdata);
+pop = pop_sortCompact(pop);
 
 % dealing with feasibility on lower level
 if ~isempty(varargin)
