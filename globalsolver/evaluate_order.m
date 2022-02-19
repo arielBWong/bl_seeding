@@ -22,7 +22,7 @@ if isstruct(output)     % cumstomized
     child.A = output.addon;
     child.Mdl = output.mdl;
     child.trgdata = output.trgdata;
-    child.switch_lls = output.lower_searchSwitchFlag;
+    child.switch_lls = output.lower_searchSwitchFlags;
 else
     child.F = output;
     child.A = [];

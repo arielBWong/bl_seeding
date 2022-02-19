@@ -34,7 +34,7 @@ if isstruct(output) % customized
     A_pop   = output.addon;
     Mdl_pop = output.mdl;
     trg_pop = output.trgdata;
-    switch_lls = output.lower_searchSwitchFlag;
+    switch_lls = output.lower_searchSwitchFlags;
 else
     F_pop   = output;
     A_pop   = [];

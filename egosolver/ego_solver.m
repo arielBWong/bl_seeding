@@ -65,8 +65,9 @@ end
 %--- train model
 mdl = oodacefit(trgx, trgf);
 
+n = 1;
 % infill process
-while size(trgx, 1) < param.maxFE
+while n < param.maxFE - param.initsize 
     % searching for next infill using believer
     
     ea_param.gen = 100;                    % design problem of gsolver, it should be 20
@@ -91,6 +92,7 @@ while size(trgx, 1) < param.maxFE
     
     %-------------
     mdl = oodacefit(trgx, trgf);
+     n = n + 1;
 end
 
 if visualize

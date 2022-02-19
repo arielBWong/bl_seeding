@@ -89,7 +89,7 @@ while gen <= param.gen
     child.X = generate_child2(lb, ub, pop, param);
     
     % Evaluate and Order(need to test varargin)
-    [pop,archive]= evaluate_order(pop, archive, funh_obj, funh_con, child.X, gen, param);
+    [pop, archive]= evaluate_order(pop, archive, funh_obj, funh_con, child.X, gen, param);
     
     % Reduce 2N to N
     [pop]=reduce_pop(pop,param.popsize);
@@ -101,7 +101,7 @@ while gen <= param.gen
 
   
     %%%%%%%%%%%%%%%%%%%%%%%%%
-    if visualize &&size(lb, 2) == 1
+    if visualize && size(lb, 2) == 1
        plot1d(f1, lb, ub, param); 
     end
     

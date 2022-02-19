@@ -3,7 +3,7 @@ function plot2d_withNeighbourOptimal(xu, lb, ub, match_xl, close_optxl, prob, cl
 % with starting point from surrogate landscape
 
 fignh               = figure(3);
-fignh.Position      = [50, 100, 1000, 800];
+fignh.Position   = [50, 100, 1000, 800];
 nt                  = 100;
 
 

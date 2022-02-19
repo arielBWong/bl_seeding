@@ -11,15 +11,20 @@ function [neighbour_optxu, neighbour_optxl, close_id] = retrieve_neighbour(xu, l
 % neigbhour and its matching xl
 % ------------------
 
+global lower_decisionSwitch
 dist = pdist2(xu, archive_xu); % this xu is upper level new infill xu, not added into archive_xu
 [~, idx] = sort(dist);
 for i = 1: length(idx)
-    if size(lower_searchdata_cly{idx(i)}, 1) > 500
+    % if size(lower_searchdata_cly{idx(i)}, 1) > 50
+    if lower_decisionSwitch(idx(i)) == 0      
         close_id = idx(i);
         break
     end
 end
 
+if size(lower_searchdata_cly{close_id}, 1) < 50
+    a = 0;
+end
 
 neighbour_optxu = archive_xu(close_id, :);
 neighbour_optxl = archive_xl(close_id, :);

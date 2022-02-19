@@ -1,6 +1,6 @@
 function blmapping_egoEvaldemo(problem_str, seed, varargin)
 %  This function apply kriging to bl search and bl mapping
-%
+% 
 % parse input
 p = inputParser;
 addRequired(p, 'problem_str');
@@ -48,7 +48,7 @@ funh_obj = @(x)up_objective_func(prob, x, use_seeding, seeding_strategy, thr);
 funh_con = @(x)up_constraint_func();
 
 param.gen = 9;
-param.popsize = 20;
+param.popsize = 50;
 lb = prob.xu_bl; 
 ub = prob.xu_bu;
 num_xvar = prob.n_uvar;
@@ -69,7 +69,7 @@ lower_xl = [];
 lower_eval = 0;
 lower_mdl = {};
 lower_trg = {};
-lower_decisionSwitch = zeros(param.gen, param.popsize);
+lower_decisionSwitch =[];
 
 [best_x, ~, ~, ~, ~] = gsolver(funh_obj, num_xvar, lb, ub, initmatrix, funh_con, param,  'externalfunction', funh_external,  'visualize', false);
 
@@ -81,25 +81,25 @@ xl_lastpop = lower_xl(end - param.popsize + 1:end, :);
 fu_lastpop = prob.evaluate_u(xu_lastpop, xl_lastpop);    % lazy step
 
 lowertrgdata_lastpop = lower_trg(end - param.popsize + 1 : end);
-indx_reeval = zeros(param.popsize, 1); % re-evaluation index
+switch_lastpop = lower_decisionSwitch(end - param.popsize + 1 : end);
+indx_reeval = zeros(param.popsize, 1);                 % re-evaluation index
+
 
 selected_xu = xu_lastpop(1, :);
 selected_xl = xl_lastpop(1, :);
 
 extra_lowerEval = 0;
 
-reparam.gen = 19;
-reparam.popsize = 50;
-
 for ip = 1 : param.popsize
     % check condition (1) solution that is not fully evaluated
     % (2) after reevaluation position changes (i.e. no more best solution in the population)
-    if indx_reeval(1,1) == 0 && size(lowertrgdata_lastpop{1}, 1) < 500
+    % if indx_reeval(1,1) == 0 && size(lowertrgdata_lastpop{1}, 1) < 500
+     if indx_reeval(1, 1) == 0  &&  switch_lastpop(1) ==1  % 1 means local search
         indx_reeval(1) = 1;
         
-        xl_reeval = re_evaluation(prob, xu_lastpop(1, :), xl_lastpop(1, :), reparam); % always reevaluate top one
-        
-        extra_lowerEval = extra_lowerEval + reparam.popsize * (reparam.gen + 1) - 1;
+        [xl_reeval, extraFE] = re_evaluation(prob, xu_lastpop(1, :), xl_lastpop(1, :)); % always reevaluate top one
+       
+        extra_lowerEval = extra_lowerEval + extraFE - 1;
         fu_reeval = prob.evaluate_u(xu_lastpop(1, :), xl_reeval);
         fu_lastpop(1, :) = fu_reeval;   % replace existing value;
         xl_lastpop(1, :) = xl_reeval;
@@ -108,7 +108,9 @@ for ip = 1 : param.popsize
         xu_lastpop = xu_lastpop(idx, : );
         xl_lastpop = xl_lastpop(idx, :);
         fu_lastpop = fu_lastpop(idx, :);
-        lowertrgdata_lastpop = lowertrgdata_lastpop(idx);
+        
+        % lowertrgdata_lastpop = lowertrgdata_lastpop(idx);
+        switch_lastpop = switch_lastpop(idx);
         indx_reeval = indx_reeval(idx, :);
     else
         selected_xu = xu_lastpop(1, :);
@@ -116,23 +118,37 @@ for ip = 1 : param.popsize
         break;
     end
 end
-
 save_results(upper_xu, lower_xl, prob,  selected_xu, selected_xl, seed, use_seeding, lower_eval, extra_lowerEval, seeding_strategy, lower_decisionSwitch, thr);
 
 end
 
-function xl_reeval = re_evaluation(prob, xu, xl, param)
+function [xl_reeval, extraFE] = re_evaluation(prob, xu, xl)
 % 
 initmatrix = xl;
 funh_obj = @(x)prob.evaluate_l(xu, x);
-funh_con = @(x)up_constraint_func(); % re-use same outcome function
+funh_con = @(x)re_evalcons(x); % re-use same outcome function
 
+% apply believer Kriging
+param.maxFE = 50;
+param.initsize = 20;
 num_xvar = prob.n_lvar;
-[xl_reeval, ~, ~, ~, ~] = gsolver(funh_obj, num_xvar, prob.xl_bl, prob.xl_bu, initmatrix, funh_con, param);
+ [best_x, best_f, best_c, archive_search] = ego_solver(funh_obj, num_xvar, prob.xl_bl, prob.xl_bu, initmatrix, funh_con, param, 'visualize', false); 
 
+ % follow local search
+ local_FE = 50;
+ % attach a local search
+  [xsol, ~,history, output] = lowerlevel_fmincon(best_x, local_FE, prob.xl_bl, prob.xl_bu,funh_obj, funh_con);
+ localdata = [history.x, history.fval];
+ 
+ xl_reeval = xsol;
+extraFE = param.maxFE  + output.funcCount;
                             
 end
 
+function [c, ce] = re_evalcons(x)
+c = [];
+ce = [];
+end
 
 function out = up_probrecord(pop)
 % re-do one more round of initialization
@@ -142,12 +158,23 @@ global upper_xu
 global lower_xl
 global lower_mdl
 global lower_trg
+global lower_decisionSwitch
 
 
 upper_xu = [upper_xu; pop.X];
 lower_xl = [lower_xl; pop.A];
 lower_mdl = [lower_mdl, pop.Mdl];
 lower_trg = [lower_trg, pop.trgdata];
+lower_decisionSwitch = [lower_decisionSwitch;  pop.switch_lls];
+
+
+% check the matching between lower_trg and lower_decisionSwitch
+n = length(lower_trg);
+for i = 1:n
+    if size(lower_trg(i), 1) < 50 && lower_decisionSwitch(i) == 0
+        fprintf('error generation: %d \n', i);
+    end
+end
 
 out = [];
 end
@@ -157,7 +184,7 @@ function [output] =  up_objective_func(prob, xu, use_seeding, seeding_strategy, 
 global upper_xu
 global lower_xl
 global g
-global lower_decisionSwitch
+
 % upper xu and lower level does not change at the same time,
 % upper_xu changes in generation wise, lower_xl changes in each xu's
 % evaluation step. they should eventually have the same size.
@@ -173,11 +200,8 @@ trgdatas = {};
 vis= false;
 for i = 1:m
     fprintf('gen %d, ind %d \n ', g, i);
-    xui = xu(i, :);
+    xui = xu(i, :);  
 
-    if g>1
-        vis = true;
-    end
     [match_xl, mdl, trgdata, lower_searchSwitchFlag] = llmatch_egoEvaluation(xui, prob, ...
         'archive_xu', upper_xu, 'archive_xl', lower_xl,...
         'seeding_only', use_seeding,  'seeding_strategy', seeding_strategy, ...
@@ -190,11 +214,9 @@ for i = 1:m
     f = [f; fi];
     mdls{end+1} = mdl;
     trgdatas{end+1} = trgdata;
-    lower_searchSwitchFlags = [lower_searchSwitchFlags, lower_searchSwitchFlag];
+    lower_searchSwitchFlags = [lower_searchSwitchFlags; lower_searchSwitchFlag];
 end
 fprintf('\n');
-
-
 
 g = g + 1;
 
@@ -202,12 +224,13 @@ output.f = f;
 output.addon = xl;
 output.mdl = mdls;
 output.trgdata = trgdatas;
+output.lower_searchSwitchFlags = lower_searchSwitchFlags;
+
 end
 
 function c = up_constraint_func()
 c = [];
 end
-
 
 
 function existing = result_check(prob, seed, use_seeding,  seeding_strategy)

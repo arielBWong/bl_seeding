@@ -48,6 +48,7 @@ y_trg{2,:} = expensive_f;
 try
     co_mdl = oodacefit(x_trg, y_trg);
 catch ME
+    fprintf('--cokriging fails switch to replacement \n');
     co_mdl = replace_dace(expensive_x, expensive_f);
 end
 % [co_mdl, co_mdlparam] = cokrgmodel_building(x_trg, y_trg, prob);

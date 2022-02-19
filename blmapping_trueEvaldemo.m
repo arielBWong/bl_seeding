@@ -30,10 +30,10 @@ rng(seed, 'twister');
 global prob
 prob = eval(prob_str);
  
-existing = result_check(prob, seed, use_seeding,  seeding_strategy);
-if existing
-    return;
-end
+% existing = result_check(prob, seed, use_seeding,  seeding_strategy);
+% if existing
+%     return;
+% end
 
 %------------------Process starts--------------------
 % insert global search
@@ -117,7 +117,7 @@ for ip = 1 : param.popsize
     end
 end
 
-save_results(upper_xu, lower_xl, prob,  selected_xu, selected_xl, seed, use_seeding, lower_eval, extra_lowerEval, seeding_strategy, lower_decisionSwitch, thr);
+% save_results(upper_xu, lower_xl, prob,  selected_xu, selected_xl, seed, use_seeding, lower_eval, extra_lowerEval, seeding_strategy, lower_decisionSwitch, thr);
 
 end
 
@@ -175,7 +175,9 @@ for i = 1:m
     fprintf('gen %d, ind %d \n ', g, i);
     xui = xu(i, :);
 
-    
+    if g>1
+        vis = true;
+    end
     [match_xl, mdl, trgdata, lower_searchSwitchFlag] = llmatch_trueEvaluation(xui, prob, ...
         'archive_xu', upper_xu, 'archive_xl', lower_xl,...
         'seeding_only', use_seeding,  'seeding_strategy', seeding_strategy, ...

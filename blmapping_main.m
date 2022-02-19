@@ -24,9 +24,9 @@ rx = p.Results.restart_num;
 visualize = false;
 if visualize
     fighn  = figure('Position', [100 100 800 800]);
-    h1     = subplot(2, 2, 1);
-    h2     = subplot(2, 2, 3);
-    h3     = subplot(2, 2, 4);
+    h1 = subplot(2, 2, 1);
+    h2 = subplot(2, 2, 3);
+    h3 = subplot(2, 2, 4);
 end
 
 rng(seed, 'twister');
@@ -58,8 +58,8 @@ llmatch_p.localmethod         = [];
 xu = lhsdesign(inisize_u, prob.n_uvar, 'criterion', 'maximin', 'iterations', 1000);
 xu = repmat(prob.xu_bl, inisize_u, 1) + repmat((prob.xu_bu - prob.xu_bl), inisize_u, 1) .* xu;
 
-xl	            = [];
-low_neval       = 0;
+xl	= [];
+low_neval  = 0;
 
 % for testing lower level correlation
 train_xl        = lhsdesign(inisize_l, prob.n_lvar, 'criterion','maximin','iterations',1000);
@@ -73,23 +73,23 @@ artificial_flag = [];
 for i = 1:inisize_u
     fprintf('Initialition xu matching process iteration %d\n', i);
     [xl_single, n, flag, lower_archive]   = llmatch_keepdistance(xu(i, :), llmatch_p, 'visualization', false, 'lower_archive', lower_archive);
-    artificial_flag     = [artificial_flag; flag];
-     xl                    = [xl; xl_single];
-     n_FE                = n_FE + n;
+    artificial_flag  = [artificial_flag; flag];
+     xl = [xl; xl_single];
+     n_FE  = n_FE + n;
 end
 
 
 %---xu evaluation
-[fu, cu]                 = prob.evaluate_u(xu, xl);
-[fl,  cl]                  = prob.evaluate_l(xu, xl);
+[fu, cu]  = prob.evaluate_u(xu, xl);
+[fl,  cl] = prob.evaluate_l(xu, xl);
 
 % -- archive all evaluated
-archive.xu     = xu;
-archive.xl      = xl;
-archive.fu     = fu;
-archive.fl      = fl;
-archive.cu    = cu;
-archive.cl     = cl;
+archive.xu  = xu;
+archive.xl = xl;
+archive.fu = fu;
+archive.fl  = fl;
+archive.cu  = cu;
+archive.cl  = cl;
 archive.artificial_flag = artificial_flag;
 
 krg_param.GPR_type = 2;
@@ -97,11 +97,10 @@ krg_param.no_trials = 1;
 
 %---- prepare mapping---
 param_ea.popsize = num_pop;
-param_ea.gen       = num_gen;
+param_ea.gen  = num_gen;
 
 map_param.GPR_type = 2;
 map_param.no_trials = 1;
-
 
 global distance_checkN
 distance_checkN = [];
@@ -122,7 +121,6 @@ for iter = 1:numiter_u
                         num_pop, num_gen, cu, normhn);
                                         
     [pred_fl, pred_mu] = Predict_GPR(mapping_bl, newxu, map_param, mapping_archive);
-
 
     dist = pdist2(newxu, archive.xu);
     [~, idx] = sort(dist);

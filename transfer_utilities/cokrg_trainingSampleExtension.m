@@ -32,10 +32,6 @@ nc = 1000;
 std_2 = sum( (close_xlarchive - seed_xl) .* (close_xlarchive - seed_xl), 1 )/ (nc - 1);  % sum over each element
 std_2 = sqrt(std_2);
 
-
-
-
-
 xl_samplesIn = [];
 xl_samplesOut = [];
 xl_samples = [];
@@ -48,10 +44,6 @@ while size(xl_samples, 1) < ns
     end
     R = mvnrnd(seed_xl, sigma, nc);                 % expand the same size as archive to avoid for loop
 
-    % first seperate within std and without std
-    % mask2d_stdIn =  (abs(R - seed_xl) < std_2); 
-    % mask_stdIn = sum(mask2d_stdIn, 2) == prob.n_lvar;
-    % mask_stdOut = ~mask_stdIn;
     
     mask_lbcomply = R > prob.xl_bl;
     mask_ubcomply = R < prob.xl_bu;
@@ -60,12 +52,6 @@ while size(xl_samples, 1) < ns
     
     idx = mask_comply == prob.n_lvar;
     tmp = R(idx, :);
-    
-    % only add samples outside standard deviation
-    % xl_samplesDelta = abs(tmp - seed_xl);
-    % radius_Delta = sqrt(sum(xl_samplesDelta .* xl_samplesDelta, 2));
-    % mask_stdOut = radius_Delta > std_radius; 
-    % mask_stdIn = radius_Delta < std_radius;
 
     mask2d_stdIn =  (abs(tmp - seed_xl) < std_2); 
     mask_stdIn = sum(mask2d_stdIn, 2) == prob.n_lvar;
@@ -75,11 +61,30 @@ while size(xl_samples, 1) < ns
     xl_samplesOut = tmp(mask_stdOut, :);
     
     if size(xl_samplesIn, 1) < int16(samplesize/2 )|| size(xl_samplesOut, 1) <int16( samplesize/2)
-        % because take half within std, half outside std 
-        error('problem in sampling, valid sample size is smaller than need');
+        % because take half within std, half outside std
+        % error('problem in sampling, valid sample size is smaller than need');
+        fprintf('sample size is too small \n');
+        if size(xl_samplesIn, 1) < int16(samplesize/2 )
+            xl_samples = [xl_samples;  xl_samplesIn];
+        else
+            xl_samples = [xl_samples; xl_samplesIn(1:int16(samplesize/2), :)];
+        end
+        %------------
+        if size(xl_samplesOut, 1) <int16( samplesize/2)
+            xl_samples = [xl_samples; xl_samplesOut ];
+        else
+             xl_samples = [xl_samples;  xl_samplesOut(1:int16(samplesize/2), :) ];
+        end
+        
+        % recount sample size
+        ns = size(xl_samples, 1);
+        
+        
+    else
+         xl_samples = [xl_samplesIn(1:int16(samplesize/2), :); xl_samplesOut(1:int16(samplesize/2), :)];
     end
     
-    xl_samples = [xl_samplesIn(1:int16(samplesize/2), :); xl_samplesOut(1:int16(samplesize/2), :)];
+    % xl_samples = [xl_samplesIn(1:int16(samplesize/2), :); xl_samplesOut(1:int16(samplesize/2), :)];
     % check on which dimension  with std will violate boundary
     
 
@@ -88,25 +93,28 @@ while size(xl_samples, 1) < ns
 
     if  any(check_upperbound) 
         new_boundsample =  seed_xl .* (~check_upperbound) + prob.xl_bu .* (check_upperbound);
-        xl_samples(int16(samplesize/2) + 1, :) = []; % delete a middle point
+        % xl_samples(int16(samplesize/2) + 1, :) = []; % delete a middle point
+        
+        rnd_idx = randperm(ns);
+        xl_samples(rnd_idx(1), :) = []; % delete a random point
+        
         xl_samples = [xl_samples; new_boundsample];
         bound_count = bound_count + 1;
     end
 
     if any(check_lowerbound) 
         new_boundsample = seed_xl .* (~check_lowerbound) + prob.xl_bl .* check_lowerbound;
-        xl_samples(int16(samplesize/2) + 1, :) = []; % delete a middle point
+        % xl_samples(int16(samplesize/2) + 1, :) = []; % delete a middle point
+        
+        rnd_idx = randperm(ns);
+        xl_samples(rnd_idx(1), :) = [];   % delete a random point
+         
+        
         xl_samples = [xl_samples; new_boundsample];
         bound_count = bound_count + 1;
-    end
-
-    
+    end   
 end
 
-
-
-% close_xuu = repmat(seed_xu, nc, 1);  
-% close_fl = prob.evaluate_l(close_xuu, close_xlarchive);
 close_fl = lower_searchdata_cly{close_id}(:,  end);
 
 expensive_x = [];
@@ -128,18 +136,18 @@ for i = 1:bound_count
     expensive_x = [expensive_x; xl_samples(end - i+1, :)];
 end
 
- % create visualization, 
-visualize_std(seed_xl, std_2, prob, xu, expensive_x,  lower_searchdata_cly{close_id}(:, 1:end-1) );    
+% create visualization, 
+% visualize_std(seed_xl, std_2, prob, xu, expensive_x,  lower_searchdata_cly{close_id}(:, 1:end-1) );    
 
 
 xuu = repmat(xu, ns, 1);
 expensive_f = prob.evaluate_l(xuu, expensive_x); 
 
-correlation = corr(cheap_f, expensive_f(1:ns-bound_count,:));
+correlation = corr(cheap_f, expensive_f(1:ns-bound_count,:));   % correlation does not consider boundary
 fprintf('Correlation with closest landscape is %0.4f \n', correlation);
 
 % add more LF samples
-extra_lb = min(expensive_x, [], 1); % use cheap because it expensive overlaps with cheap
+extra_lb = min(expensive_x, [], 1);                         % use cheap because it expensive overlaps with cheap
 extra_ub = max(expensive_x, [], 1);
 cheap_extrax = lhsdesign(ns, prob.n_lvar, 'criterion','maximin','iterations',1000);
 cheap_extrax = repmat(extra_lb, ns, 1) ...
@@ -211,8 +219,7 @@ nt = 100;
 tst1 = linspace(prob.xl_bl(1), prob.xl_bu(1), nt);
 tst2 = linspace(prob.xl_bl(2), prob.xl_bu(2), nt);
 
-tst11 = meshgrid(tst1);
-tst22 = meshgrid(tst2);
+[tst11, tst22] = meshgrid(tst1, tst2);
 
 tst11L = tst11(:);
 tst22L = tst22(:);
@@ -221,7 +228,8 @@ xuu = repmat(xu, size(tst11L, 1), 1);
 truef = prob.evaluate_l(xuu, [tst11L, tst22L]);
 truef = reshape(truef, [nt, nt]);
 
-[M,c] = contour(tst1, tst2, truef); hold on;
+subplot(1,2,1);
+[M,c] = contour(tst11, tst22, truef); hold on;
 c.LineWidth = 3;
 scatter(mean(1), mean(2),  180, [0.9290 0.6940 0.1250], 'filled'); hold on;
 
@@ -230,6 +238,9 @@ rectangle('Position', [lower_point, std(1)*2, std(2)*2]);
 
 scatter(archivex(:, 1), archivex(:, 2), 200, 'g', 'filled'); hold on;
 scatter(samplex(:, 1), samplex(:, 2), 120, 'r', 'filled'); hold on;
+
+subplot(1, 2, 2);
+surf(tst11, tst22, truef, 'FaceAlpha',0.5, 'EdgeColor', 'none'); hold on;
 
 pause(0.5);
 close(fighn);

@@ -90,9 +90,9 @@ if ~isempty(archive_xu) && seeding_only % first generation on the upper level us
             else
                 lower_searchSwitchFlag = 1;
                 % test purpose
-                f_test = prob.evaluate_l(xu, match_xl);
-                xl_prime = prob.get_xlprime(xu);
-                fl_prime = prob.evaluate_l(xu, xl_prime);
+%                 f_test = prob.evaluate_l(xu, match_xl);
+%                 xl_prime = prob.get_xlprime(xu);
+%                 fl_prime = prob.evaluate_l(xu, xl_prime);
 
 %                 if abs(fl_prime - f_test) > 0.01 % || visualization
 %                     % plot 
