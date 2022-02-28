@@ -100,7 +100,7 @@ else
 
     if onbound_check
         trgdata = 'place holder';
-        match_xl = [];
+        match_xl = cokrg_optxl;
         lower_evalcount = lower_evalcount + 1;    % one more evaluation 
         localsearch_fail = true;
     else

@@ -1,4 +1,6 @@
 result_folder/
+/resultfolder_*
+/processedresult_*
 *.asv
 *.avi
 *.png

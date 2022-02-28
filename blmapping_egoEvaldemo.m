@@ -54,7 +54,7 @@ ub = prob.xu_bu;
 num_xvar = prob.n_uvar;
 initmatrix = [];
 
-global upper_xu   % upper archive 
+global upper_xu     % upper archive 
 global lower_xl     % lower archive
 global lower_eval
 global lower_mdl
@@ -78,11 +78,11 @@ lower_decisionSwitch =[];
 % retrieve the last population
 xu_lastpop = upper_xu(end - param.popsize + 1:end, :);
 xl_lastpop = lower_xl(end - param.popsize + 1:end, :);
-fu_lastpop = prob.evaluate_u(xu_lastpop, xl_lastpop);    % lazy step
+fu_lastpop = prob.evaluate_u(xu_lastpop, xl_lastpop);                       % lazy step
 
 lowertrgdata_lastpop = lower_trg(end - param.popsize + 1 : end);
 switch_lastpop = lower_decisionSwitch(end - param.popsize + 1 : end);
-indx_reeval = zeros(param.popsize, 1);                 % re-evaluation index
+indx_reeval = zeros(param.popsize, 1);                                      % re-evaluation index
 
 
 selected_xu = xu_lastpop(1, :);
@@ -94,7 +94,7 @@ for ip = 1 : param.popsize
     % check condition (1) solution that is not fully evaluated
     % (2) after reevaluation position changes (i.e. no more best solution in the population)
     % if indx_reeval(1,1) == 0 && size(lowertrgdata_lastpop{1}, 1) < 500
-     if indx_reeval(1, 1) == 0  &&  switch_lastpop(1) ==1  % 1 means local search
+     if indx_reeval(1, 1) == 0  % &&  switch_lastpop(1) == 1  % 1 means local search
         indx_reeval(1) = 1;
         
         [xl_reeval, extraFE] = re_evaluation(prob, xu_lastpop(1, :), xl_lastpop(1, :)); % always reevaluate top one
@@ -118,31 +118,30 @@ for ip = 1 : param.popsize
         break;
     end
 end
-save_results(upper_xu, lower_xl, prob,  selected_xu, selected_xl, seed, use_seeding, lower_eval, extra_lowerEval, seeding_strategy, lower_decisionSwitch, thr);
+save_results(upper_xu, lower_xl, prob,  selected_xu, selected_xl, seed, use_seeding, lower_eval, extra_lowerEval, seeding_strategy, lower_decisionSwitch, thr, lower_trg);
 
 end
 
 function [xl_reeval, extraFE] = re_evaluation(prob, xu, xl)
-% 
+%
 initmatrix = xl;
 funh_obj = @(x)prob.evaluate_l(xu, x);
 funh_con = @(x)re_evalcons(x); % re-use same outcome function
 
 % apply believer Kriging
-param.maxFE = 50;
+param.maxFE = 150;
 param.initsize = 20;
 num_xvar = prob.n_lvar;
- [best_x, best_f, best_c, archive_search] = ego_solver(funh_obj, num_xvar, prob.xl_bl, prob.xl_bu, initmatrix, funh_con, param, 'visualize', false); 
+[best_x, best_f, best_c, archive_search] = ego_solver(funh_obj, num_xvar, prob.xl_bl, prob.xl_bu, initmatrix, funh_con, param, 'visualize', false, 'infill', 2);
 
- % follow local search
- local_FE = 50;
- % attach a local search
-  [xsol, ~,history, output] = lowerlevel_fmincon(best_x, local_FE, prob.xl_bl, prob.xl_bu,funh_obj, funh_con);
- localdata = [history.x, history.fval];
- 
- xl_reeval = xsol;
+% follow local search
+local_FE = 50;
+% attach a local search
+[xsol, ~,history, output] = lowerlevel_fmincon(best_x, local_FE, prob.xl_bl, prob.xl_bu,funh_obj, funh_con);
+localdata = [history.x, history.fval];
+
+xl_reeval = xsol;
 extraFE = param.maxFE  + output.funcCount;
-                            
 end
 
 function [c, ce] = re_evalcons(x)
@@ -169,12 +168,12 @@ lower_decisionSwitch = [lower_decisionSwitch;  pop.switch_lls];
 
 
 % check the matching between lower_trg and lower_decisionSwitch
-n = length(lower_trg);
-for i = 1:n
-    if size(lower_trg(i), 1) < 50 && lower_decisionSwitch(i) == 0
-        fprintf('error generation: %d \n', i);
-    end
-end
+% n = length(lower_trg);
+% for i = 1:n
+%     if size(lower_trg(i), 1) < 50 && lower_decisionSwitch(i) == 0
+%         fprintf('error generation: %d \n', i);
+%     end
+% end
 
 out = [];
 end
@@ -201,6 +200,7 @@ vis= false;
 for i = 1:m
     fprintf('gen %d, ind %d \n ', g, i);
     xui = xu(i, :);  
+
 
     [match_xl, mdl, trgdata, lower_searchSwitchFlag] = llmatch_egoEvaluation(xui, prob, ...
         'archive_xu', upper_xu, 'archive_xl', lower_xl,...
@@ -256,7 +256,7 @@ end
 
 end
 
-function  save_results(xu, xl, prob, selected_xu, selected_xl, seed, use_seeding,  lower_eval, extra_lowerEval, seeding_strategy, lower_decisionSwitch, thr)
+function  save_results(xu, xl, prob, selected_xu, selected_xl, seed, use_seeding,  lower_eval, extra_lowerEval, seeding_strategy, lower_decisionSwitch, thr, lower_trg)
 
 [fu, cu] = prob.evaluate_u(xu, xl);   % lazy  step
 [fl, cl] = prob.evaluate_l(xu, xl);
@@ -305,6 +305,11 @@ csvwrite(savename, [lower_eval, extra_lowerEval]);
 filename = strcat('lowerlevelswitch_seed_',  num2str(seed), '.mat');
 savename = fullfile(resultfolder, filename);
 save(savename,  'lower_decisionSwitch');
+
+
+filename = strcat('lowerTrgdata_seed_',  num2str(seed), '.mat');
+savename = fullfile(resultfolder, filename);
+save(savename,  'lower_trg');
 
 if size(fu, 2) > 1
     % fu nd front

@@ -31,6 +31,7 @@ addRequired(p, 'param');
 addParameter(p, 'externalfunction', []);
 addParameter(p, 'visualize', false);
 addParameter(p, 'ea_param', []);
+addParameter(p, 'infill', 1); % 1 -- KB, 2 --EI
 parse(p, funh_obj, num_xvar, lb, ub, initmatrix, funh_con, param, varargin{:});
 
 %-------------------
@@ -44,6 +45,7 @@ param = p.Results.param;
 external_funh = p.Results.externalfunction;
 visualize = p.Results.visualize;
 ea_param = p.Results.ea_param;
+infill = p.Results.infill;
 %-------------------
 
 external_return = [];
@@ -53,11 +55,20 @@ bestc = NaN;
 
 %--------start--------------------
 n_init = size(initmatrix, 1);
-n_rest = param.initsize  - n_init;
+n_rest = param.initsize;  % - n_init;
 
 trgx = repmat(lb, n_rest, 1) + repmat(ub - lb, n_rest, 1) .* lhsdesign(n_rest, num_xvar);
-trgx = [trgx; initmatrix];
 trgf =  funh_obj(trgx);
+
+% add init with distance cautious
+for i = 1:n_init
+    next_x = initmatrix(i, :);
+    next_f = funh_obj(next_x);
+    [trgx, trgf] = trgdata_extension_withDistCheck(trgx, trgf, next_x, next_f, lb, ub);
+    
+end
+
+
 if visualize
     fighn = figure(1);
 end
@@ -67,13 +78,21 @@ mdl = oodacefit(trgx, trgf);
 
 n = 1;
 % infill process
-while n < param.maxFE - param.initsize 
+while n <= param.maxFE - param.initsize 
     % searching for next infill using believer
     
-    ea_param.gen = 100;                    % design problem of gsolver, it should be 20
-    ea_param.popsize = 100;
+    ea_param.gen = 200;                    % design problem of gsolver, it should be 20
+    ea_param.popsize = 200;
     
-    infill_obj = @(x)infill_objective(mdl, x);
+    if infill == 1 %KB
+        infill_obj = @(x)infill_objective(mdl, x);
+    else % EI
+        [~, idx] = sort(trgf);
+        fmin = trgf(idx(1));
+        infill_obj = @(x)infill_EIobjective(mdl, x, fmin);
+    end
+    
+    
     infill_con = @(x)infill_constraints(x);
     
     % initmatrix is set early in this method;
@@ -92,7 +111,7 @@ while n < param.maxFE - param.initsize
     
     %-------------
     mdl = oodacefit(trgx, trgf);
-     n = n + 1;
+    n = n + 1;
 end
 
 if visualize
@@ -115,6 +134,19 @@ end
 
 function f = infill_objective(mdl, x)
 [f, ~] = mdl.predict(x);
+end
+
+function f = infill_EIobjective(mdl, x, fmin)
+
+[mu, sig] = mdl.predict(x);
+fmin = repmat(fmin, size(x, 1), 1);
+imp = fmin - mu;
+z = imp ./ sig;
+ei1 = imp .* Gaussian_CDF(z);
+ei1(sig==0) = 0;
+ei2 = sig .* Gaussian_PDF(z);
+EIM = (ei1 + ei2);
+f = -EIM;
 end
 
 function c = infill_constraints(x)
