@@ -55,7 +55,7 @@ num_xvar = prob.n_uvar;
 initmatrix = [];
 
 global upper_xu     % upper archive 
-global lower_xl     % lower archive
+global lower_xl       % lower archive
 global lower_eval
 global lower_mdl
 global lower_trg

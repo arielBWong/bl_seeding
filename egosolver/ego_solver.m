@@ -32,6 +32,7 @@ addParameter(p, 'externalfunction', []);
 addParameter(p, 'visualize', false);
 addParameter(p, 'ea_param', []);
 addParameter(p, 'infill', 1); % 1 -- KB, 2 --EI
+addParameter(p, 'xl_prime', []);
 parse(p, funh_obj, num_xvar, lb, ub, initmatrix, funh_con, param, varargin{:});
 
 %-------------------
@@ -46,6 +47,7 @@ external_funh = p.Results.externalfunction;
 visualize = p.Results.visualize;
 ea_param = p.Results.ea_param;
 infill = p.Results.infill;
+xl_prime = p.Results.xl_prime;
 %-------------------
 
 external_return = [];
@@ -103,7 +105,11 @@ while n <= param.maxFE - param.initsize
     
     % place visualization before update  trg
     if visualize
-        plot2d_infill(fighn, lb, ub, funh_obj, mdl, trgx, trgf, next_x);
+        if size(next_x, 2) == 2
+            plot2d_infill(fighn, lb, ub, funh_obj, mdl, trgx, trgf, next_x);
+        else
+            plot3d_infill(fighn, lb, ub, funh_obj, mdl, trgx, trgf, next_x, next_f, xl_prime);
+        end
     end
     
     % training data extension needs distance check
@@ -114,9 +120,7 @@ while n <= param.maxFE - param.initsize
     n = n + 1;
 end
 
-if visualize
-   close(fighn);
-end
+
 
 % select best solution
 [~, idx] = sort(trgf);
@@ -128,6 +132,11 @@ bestc = [];
 n = 1:size(trgx, 1);
 archive.sols = [n', trgx, trgf];
 
+if visualize
+    plot3d_infill(fighn, lb, ub, funh_obj, mdl, trgx, trgf, bestx, bestf, xl_prime);
+    
+   close(fighn);
+end
 
 
 end
@@ -186,6 +195,26 @@ infillf = mdl.predict(infillx);
 scatter3(infillx(1), infillx(2), infillf,  80, 'r', 'filled' );
 
 pause(0.5);
+end
+
+
+
+function plot3d_infill(fighn, lb, ub, funh_obj, mdl, trgx, trgf, infillx, infillf, xl_prime)
+clf(fighn);
+
+trgx = [trgx; infillx];
+trgf = [trgf; infillf];
+scatter3(trgx(:, 1), trgx(:, 2), trgx(:, 3), 60, trgf, 'filled'); hold on;
+scatter3(infillx(:, 1), infillx(:, 2), infillx(:, 3), 120, 'b'); hold on;
+scatter3(xl_prime(:, 1), xl_prime(:, 2), xl_prime(:, 3), 120, 'r' ); hold on;
+colorbar
+colormap jet
+pause(0.5);
+
+
+
+
+
 end
 
 function [trgx, trgf] = trgdata_extension_withDistCheck(trgx, trgf, newx, newf, lb, ub)

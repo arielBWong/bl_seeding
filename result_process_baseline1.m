@@ -29,46 +29,54 @@ problems_2 = cell(1, 1);
 problems_2{1} = {'smd1mp(1, 1, 1)' , 'smd2mp(1, 1, 1)',  'smd3mp(1, 1, 1)',  'smd4mp(1, 1, 1)', ....
     'smd5mp(1, 1, 1)', 'smd6mp(1, 0, 1, 1)', 'smd7mp(1, 1, 1)',  'smd8mp(1, 1, 1)'};
 
+
 problems_2{1} = { 'smd1mp(1, 1, 1)' , 'smd2mp(1, 1, 1)',  'smd3mp(1, 1, 1)', 'smd4mp(1, 1, 1)', ...
     'smd5mp(1, 1, 1)', 'smd6mp(1, 0, 1, 1)', 'smd7mp(1, 1, 1)',  'smd8mp(1, 1, 1)', ...
     'smd1(1, 1, 1)' , 'smd2(1, 1, 1)',  'smd3(1, 1, 1)', 'smd4(1, 1, 1)', 'smd5(1, 1, 1)',...
     'smd6(1, 0, 1, 1)', 'smd7(1, 1, 1)', 'smd8(1, 1, 1)'};
 
-% problems_2{1}  = {'smd2mp(1, 1, 1)'};
 
-% problems_2{1} = {'smd1mp(1, 2, 1)' , 'smd2mp(1, 2, 1)',  'smd3mp(1, 2, 1)',  'smd4mp(1, 2, 1)', ....
-%               'smd5mp(1, 2, 1)' , 'smd6mp(1, 0, 2, 1)', 'smd7mp(1, 2, 1)',  'smd8mp(1, 2, 1)'};
-% methods = {'_baseline_ea', '_seeding_strategy_1', '_seeding_strategy_2', '_seeding_strategy_3'};
+problems_2{1} = { 'smd1mp(1, 2, 1)' , 'smd2mp(1, 2, 1)',  'smd3mp(1, 2, 1)', 'smd4mp(1, 2, 1)', ...,
+    'smd5mp(1, 2, 1)', 'smd6mp(1, 0, 2, 1)', 'smd7mp(1, 2, 1)',  'smd8mp(1, 2, 1)',...
+    'smd1(1, 2, 1)' , 'smd2(1, 2, 1)',  'smd3(1, 2, 1)', 'smd4(1, 2, 1)', ...
+     'smd5(1, 2, 1)' , 'smd6(1, 2, 1)',  'smd7(1, 2, 1)', 'smd8(1, 2, 1)'};
+postfix = '';
+ 
+% problems_2{1} = { 'smd2mp(1, 2, 1)',   'smd4mp(1, 2, 1)'};
+% postfix = '_300FE';
 
 for is = 1:length(problems_2)
     % methods = {'_baseline_ea', '_seeding_strategy_1', '_seeding_strategy_3'};
-    methods = {'_baseline_ea', '_seeding_strategy_2', '_seeding_strategy_3'};
+    methods = {'_baseline_ea',  '_seeding_strategy_2',  '_seeding_strategy_3'};
+    %methods = {'_seeding_strategy_2'};
     problems = problems_2{is};
     prob_test = eval(problems{1});
     nv = prob_test.n_lvar;
 
     np = length(problems);
     seed = 11;
-    mseed = 5;
+    mseed = 6;
     sigTestIndex = 3;  % refer to the newest algorithm which is 4 in this case
 
-
-    foldername = strcat('resultfolder_trueEval', num2str(nv), '_thr_', num2str(thr));
+    foldername = strcat('resultfolder_trueEval', num2str(nv), '_thr_', num2str(thr), postfix);
     resultfolder = fullfile(pwd, foldername);
 
-    outfoldername = strcat('processedresult_trueEval', num2str(nv),'_thr_', num2str(thr));
+    outfoldername = strcat('processedresult_trueEval', num2str(nv),'_thr_', num2str(thr), postfix);
     outfoldername = fullfile(pwd, outfoldername);
 
     if ~exist(outfoldername, 'dir')
         mkdir(outfoldername);
     end
 
+    % lastpop_missleadingrate(problems, methods, resultfolder, np, seed, mseed, outfoldername);
     % accuracy_extraction(problems, methods, resultfolder, np, seed, mseed, sigTestIndex, outfoldername);
 
     % methods = { '_seeding_strategy_2',  '_seeding_strategy_3'};
     % methods = {  '_seeding_strategy_3'};
     % FE_analysis(problems, methods, resultfolder, np, seed, mseed, outfoldername) ;
     plot_convergence(problems, methods, resultfolder, np, seed, mseed, outfoldername);
+    
+    % plot_errornum(problems, methods, resultfolder, np, seed, mseed, outfoldername);
 
     % methods = { '_seeding_strategy_2', '_seeding_strategy_3', };
     % switch_ratio(problems, methods, resultfolder, seed, mseed,outfoldername);
@@ -77,7 +85,59 @@ for is = 1:length(problems_2)
    % acccuracy_baseline(problems, methods, resultfolder, np, seed, mseed, 2, outfoldername);
 end
 
+function [] =  plot_errornum(problems, methods, resultfolder, np, seed, mseed, outfoldername)
+nm = length(methods);
+permethod_accuracy_up = {}; % upper save
+permethod_accuracy_down = {}; % lower save
 
+prob = eval(problems{1});
+diff = 'mp';
+prefix = 'mix';
+
+cl = {'red', 'green', 'blue'};
+
+for p = 1:np
+    prob = eval(problems{p});
+    prob_acrossm = {};
+    for m = 1:nm
+        
+        prob_fu = [];
+        for s = 1: seed
+            filename = strcat('fu_seed_', num2str(s), '.csv');
+            foldername = strcat(prob.name, methods{m});
+            savename = fullfile(resultfolder, foldername, filename);
+            fu_singleseed = csvread(savename);
+            
+            fu = reshape(fu_singleseed, [50, 10] );
+            fu = fu';
+            fu = fu<0;
+            fu = sum(fu, 2);
+            fu = fu';
+            
+            prob_fu=  [prob_fu; fu];
+        end
+        
+        prob_acrossm{m} = prob_fu;
+        
+    end
+    fighn = figure(1);
+    for m = 1:nm
+        prob_fu = prob_acrossm{m};
+        prob_fu_mean = mean(prob_fu, 1);
+        plot(prob_fu_mean, 'LineWidth', 2, 'Color', cl{m}); hold on;
+    end
+    xlabel('Generations');
+    ylabel('Mean number of errors');
+    legend('LL-EGO baseline', 'LL-EGO Cokriging', 'LL-EGO Neighbor', 'Location','northwest');
+    title(prob.name);
+    name = strcat(prob.name, '_LLerror_comparison.png');
+    
+    saveas(gcf, name)
+    
+    close(fighn);
+end
+
+end
 
 function[] = acccuracy_baseline(problems, method, resultfolder, np, seed, mseed, sigTestIndex,outfoldername)
 % sigTestIndex is to specify sigtest columne,
@@ -323,7 +383,6 @@ fclose(fp);
 
 end
 
-
 function [] = lowerSuccessRate(problems, method, resultfolder, np, seed, mseed)
 
 localsearch_success1 = {};
@@ -425,12 +484,6 @@ prob = eval(problems{1});
 diff = 'mp';
 prefix = 'mix';
 
-% if contains(prob.name, diff)
-%     prefix = 'smd_mp_';
-% else
-%     prefix = 'smd_';
-% end
-
 for m = 1:nm
     accuracy_up = zeros(np, seed); % for one problem [problem, seed]
     accuracy_low = zeros(np, seed);
@@ -513,7 +566,7 @@ for ip = 1:np
     foldername = strcat(prob.name, method{3});
     fu_filename = fullfile(resultfolder, foldername, filename);
     fu3 = csvread(fu_filename);
-    idx = 1:50: 451;
+    idx = 1: 50: 451;
     fu3 = fu3(idx);
     
     filename = strcat('final_accuracy_seed_', num2str(nx3), '.csv');
@@ -534,7 +587,7 @@ for ip = 1:np
     linkaxes([ax1 ax2 ax3], 'xy');
     % sgtitle('Convergence comparison over generations');
     
-    name = strcat(prob.name, '_convergence comparison.png');
+    name = strcat(prob.name,'_', num2str(prob.n_lvar), '_convergence comparison.png');
     saveas(gcf, name)
     
     close(fighn);
@@ -543,7 +596,58 @@ end
 
 end 
 
+function[] = lastpop_missleadingrate(problems, method, resultfolder, np, seed, mseed, outfoldername)
 
+nm = length(method);
+np = length(problems);
+
+prob = eval(problems{1});
+diff = 'mp';
+prefix = 'mix';
+
+mislead_rate = cell(1, nm);
+for im = 1 : nm
+    mislead_rate{im} = zeros(np, seed);
+   
+    for ip = 1:np        
+        prob =eval(problems{ip});        
+        for is = 1:seed
+            filename = strcat('fu_seed_', num2str(is), '.csv');
+            foldername = strcat(prob.name, method{im});
+            savename = fullfile(resultfolder, foldername, filename);
+            
+            fu = csvread(savename);
+            fu_last = fu(451:end, :);
+            idx = fu_last<0;
+            mislead_rate{im}(ip, is) = sum(idx)/50;
+        end
+    end
+    
+    % plot
+end
+
+% write into file
+
+filename = strcat(prefix, 'median_lastpop_mislead_latex_nlvar_', num2str(prob.n_lvar),'.csv');
+filename = fullfile(outfoldername, filename);
+fp = fopen(filename, 'w');
+fprintf(fp, 'problems, global krg, Correlation Cokrg,  Correlation Neighbor \n');
+
+for ip = 1:np
+    prob = eval(problems{ip});
+    fprintf(fp, ' %s &,', prob.name);
+    for im = 1:nm
+        [~, id] = sort(mislead_rate{im}(ip, :));
+        nx = id(mseed);
+        val =  mislead_rate{im}(ip, nx);
+        fprintf(fp, '%0.2f & , ',val);
+        
+    end
+    fprintf(fp, '\\\\\n');
+end
+fclose(fp);
+
+end
 
 function [] = lowerSuccessRateExtension(problems, method, resultfolder, np, seed, mseed)
 localsearch_success1 = {};
