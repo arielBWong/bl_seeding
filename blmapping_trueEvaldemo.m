@@ -29,7 +29,7 @@ end
 rng(seed, 'twister');
 global prob
 prob = eval(prob_str);
- 
+
 % existing = result_check(prob, seed, use_seeding,  seeding_strategy);
 % if existing
 %     return;
@@ -54,7 +54,7 @@ ub = prob.xu_bu;
 num_xvar = prob.n_uvar;
 initmatrix = [];
 
-global upper_xu   % upper archive 
+global upper_xu   % upper archive
 global lower_xl   % lower archive
 global lower_eval
 global lower_mdl
@@ -94,9 +94,9 @@ reparam.popsize = 50;
 for ip = 1 : param.popsize
     % check condition (1) solution that is not fully evaluated
     % (2) after reevaluation position changes (i.e. no more best solution in the population)
-    if indx_reeval(1,1) == 0 && size(lowertrgdata_lastpop{1}, 1) < 500 
+    if indx_reeval(1,1) == 0 && size(lowertrgdata_lastpop{1}, 1) < 500
         indx_reeval(1) = 1;
-            
+        
         xl_reeval = re_evaluation(prob, xu_lastpop(1, :), xl_lastpop(1, :), reparam); % always reevaluate top one
         
         extra_lowerEval = extra_lowerEval + reparam.popsize * (reparam.gen + 1) - 1;
@@ -104,7 +104,7 @@ for ip = 1 : param.popsize
         fu_lastpop(1, :) = fu_reeval;   % replace existing value;
         xl_lastpop(1, :) = xl_reeval;
         [~, idx] = sort(fu_lastpop);
-
+        
         xu_lastpop = xu_lastpop(idx, : );
         xl_lastpop = xl_lastpop(idx, :);
         fu_lastpop = fu_lastpop(idx, :);
@@ -112,7 +112,7 @@ for ip = 1 : param.popsize
         indx_reeval = indx_reeval(idx, :);
     else
         selected_xu = xu_lastpop(1, :);
-        selected_xl = xl_lastpop(1, :); 
+        selected_xl = xl_lastpop(1, :);
         break;
     end
 end
@@ -122,7 +122,7 @@ end
 end
 
 function xl_reeval = re_evaluation(prob, xu, xl, param)
-% 
+%
 initmatrix = xl;
 funh_obj = @(x)prob.evaluate_l(xu, x);
 funh_con = @(x)up_constraint_func(); % re-use same outcome function
@@ -130,13 +130,13 @@ funh_con = @(x)up_constraint_func(); % re-use same outcome function
 num_xvar = prob.n_lvar;
 [xl_reeval, ~, ~, ~, ~] = gsolver(funh_obj, num_xvar, prob.xl_bl, prob.xl_bu, initmatrix, funh_con, param);
 
-                            
+
 end
 
 
 function out = up_probrecord(pop)
 % re-do one more round of initialization
-% 
+%
 
 global upper_xu
 global lower_xl
@@ -174,7 +174,7 @@ vis= false;
 for i = 1:m
     fprintf('gen %d, ind %d \n ', g, i);
     xui = xu(i, :);
-
+    
     if g>1
         vis = true;
     end
@@ -217,7 +217,7 @@ resultfolder = fullfile(pwd, name );
 
 if use_seeding
     foldername = strcat(prob.name, '_seeding_strategy_', num2str(seeding_strategy));
-else    
+else
     foldername = strcat(prob.name, '_baseline_ea');
 end
 
@@ -247,7 +247,7 @@ end
 
 if use_seeding
     foldername = strcat(prob.name, '_seeding_strategy_', num2str(seeding_strategy));
-else    
+else
     foldername = strcat(prob.name, '_baseline_ea');
 end
 
@@ -326,8 +326,8 @@ end
 function [] = plotBothLevel(xui, match_xl, prob)
 
 fignh               = figure(3);
-fignh.Position      = [50, 100, 1000, 400];
-nt                  = 100;
+fignh.Position  = [50, 100, 1000, 400];
+nt                     = 100;
 
 x1_tst              = linspace(prob.xu_bl(1), prob.xu_bu(1), nt);
 x2_tst              = linspace(prob.xu_bl(2), prob.xu_bu(2), nt);

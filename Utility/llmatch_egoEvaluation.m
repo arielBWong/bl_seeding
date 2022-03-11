@@ -177,7 +177,10 @@ end
 % apply believer Kriging
 
 num_xvar = prob.n_lvar;
-[best_x, best_f, best_c, archive_search] = ego_solver(funh_obj, num_xvar, prob.xl_bl, prob.xl_bu, initmatrix, funh_con, param, 'visualize', false,'infill', 2);
+
+select_hn =  'output_selection(fronts, pop)';
+select_hn = @output_selection;
+[best_x, best_f, best_c, archive_search] = ego_solver(funh_obj, num_xvar, prob.xl_bl, prob.xl_bu, initmatrix, funh_con, param, 'visualize', false,'infill', 3, 'gsolver_outputselect', select_hn);
 
 % follow local search
 local_FE = 50;
@@ -220,6 +223,9 @@ f = fnorm * y_std + y_mean;
 end
 
 function f = objective_func(prob, xu, xl)
+n = size(xl, 1);
+xu = repmat(xu, n, 1);
+
 f = prob.evaluate_l(xu, xl);
 end
 

@@ -165,7 +165,6 @@ for i = 1:ns
     close_fl(I, :) = [];
 end
 
-
 % plotsamples(seed_xu, seed_xl, prob, prob.xl_bl, prob.xl_bu,  lower_searchdata_cly{close_id}(:, 1:end-1), xl_samples, expensive_x, cheap_x);
 
 

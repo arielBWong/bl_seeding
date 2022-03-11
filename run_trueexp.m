@@ -36,7 +36,7 @@ addpath(problem_folder);
 %     'smd4(1, 2, 1)', 'smd6(1, 0, 2, 1)', };
 
 % tic;
-blmapping_egoEvaldemo('smd7mp(1, 1, 1)',  1, 'use_seeding', false, 'seeding_strategy', 1, 'threshold', 0);
+blmapping_egoEvaldemo('smd7mp(1, 2, 1)',  1, 'use_seeding', false, 'seeding_strategy', 1, 'threshold', 0);
 % toc;
 %
 

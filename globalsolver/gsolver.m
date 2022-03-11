@@ -33,6 +33,7 @@ addRequired(p,   'funh_con');
 addRequired(p,   'param');
 addParameter(p,  'externalfunction', []);
 addParameter(p,  'visualize', false);
+addParameter(p, 'output_selection', []);
 parse(p, funh_obj, num_xvar, lb, ub, initmatrix, funh_con, param, varargin{:});
 %-------
 
@@ -45,6 +46,9 @@ funh_con = p.Results.funh_con;
 param = p.Results.param;
 external_funh= p.Results.externalfunction;
 visualize = p.Results.visualize;
+output_selection = p.Results.output_selection;
+
+
 %-----------
 external_return = [];
 bestx = NaN;
@@ -98,7 +102,6 @@ while gen <= param.gen
     if ~isempty(external_funh)
         external_funh(pop);
     end
-
   
     %%%%%%%%%%%%%%%%%%%%%%%%%
     if visualize && size(lb, 2) == 1
@@ -170,12 +173,19 @@ end
 % feasible exists for mo problem
 if sum(fy_ind) > 0
     [fronts, ~, ~] = nd_sort(pop.F, find(fy_ind));
-    bestf = pop.F(fronts(1).f, :);
-    bestx = pop.X(fronts(1).f, :);
-    if ~isempty(pop.C)
-        bestc = pop.C(fronts(1).f, :);
+    if isempty(output_selection)
+        bestf = pop.F(fronts(1).f, :);
+        bestx = pop.X(fronts(1).f, :);
+        
+        
+        if ~isempty(pop.C)
+            bestc = pop.C(fronts(1).f, :);
+        else
+            bestc = [];
+        end
     else
-        bestc = [];
+        [bestx, bestf, bestc ] = output_selection(fronts, pop);
+        
     end
 else
     % no feasible solution in final population

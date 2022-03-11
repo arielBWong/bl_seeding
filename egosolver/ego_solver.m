@@ -33,6 +33,7 @@ addParameter(p, 'visualize', false);
 addParameter(p, 'ea_param', []);
 addParameter(p, 'infill', 1); % 1 -- KB, 2 --EI
 addParameter(p, 'xl_prime', []);
+addParameter(p, 'gsolver_outputselect', []);
 parse(p, funh_obj, num_xvar, lb, ub, initmatrix, funh_con, param, varargin{:});
 
 %-------------------
@@ -48,6 +49,7 @@ visualize = p.Results.visualize;
 ea_param = p.Results.ea_param;
 infill = p.Results.infill;
 xl_prime = p.Results.xl_prime;
+gsolver_outputselect= p.Results.gsolver_outputselect;
 %-------------------
 
 external_return = [];
@@ -66,8 +68,7 @@ trgf =  funh_obj(trgx);
 for i = 1:n_init
     next_x = initmatrix(i, :);
     next_f = funh_obj(next_x);
-    [trgx, trgf] = trgdata_extension_withDistCheck(trgx, trgf, next_x, next_f, lb, ub);
-    
+    [trgx, trgf] = trgdata_extension_withDistCheck(trgx, trgf, next_x, next_f, lb, ub);    
 end
 
 
@@ -79,26 +80,39 @@ end
 mdl = oodacefit(trgx, trgf);
 
 n = 1;
+
+if  infill== 2 || infill == 1
+    nmax = param.maxFE - param.initsize;
+end
+
+if infill == 3
+    nmax =  floor((param.maxFE - param.initsize)/3); % infill three points at a time
+end
+
 % infill process
-while n <= param.maxFE - param.initsize 
+while n <= nmax
     % searching for next infill using believer
     
-    ea_param.gen = 200;                    % design problem of gsolver, it should be 20
-    ea_param.popsize = 200;
+    ea_param.gen = 100;                    % design problem of gsolver, it should be 20
+    ea_param.popsize = 100;
     
-    if infill == 1 %KB
+    if infill == 1 % KB
         infill_obj = @(x)infill_objective(mdl, x);
-    else % EI
+    elseif infill== 2 % EI
         [~, idx] = sort(trgf);
         fmin = trgf(idx(1));
         infill_obj = @(x)infill_EIobjective(mdl, x, fmin);
+    else  % multiple infill point
+        [~, idx] = sort(trgf);
+        fmin = trgf(idx(1));
+        infill_obj = @(x)infill_MOobjective(mdl, x, fmin);
     end
     
     
     infill_con = @(x)infill_constraints(x);
     
     % initmatrix is set early in this method;
-    [next_x, ~, ~, ~, ~] = gsolver(infill_obj, num_xvar, lb, ub, [], infill_con, ea_param, 'visualize', false);
+    [next_x, ~, ~, ~, ~] = gsolver(infill_obj, num_xvar, lb, ub, [], infill_con, ea_param, 'visualize', false, 'output_selection', gsolver_outputselect);
     
     % add to trg data
     next_f = funh_obj(next_x);
@@ -133,8 +147,7 @@ n = 1:size(trgx, 1);
 archive.sols = [n', trgx, trgf];
 
 if visualize
-    plot3d_infill(fighn, lb, ub, funh_obj, mdl, trgx, trgf, bestx, bestf, xl_prime);
-    
+    plot3d_infill(fighn, lb, ub, funh_obj, mdl, trgx, trgf, bestx, bestf, xl_prime);    
    close(fighn);
 end
 
@@ -157,6 +170,14 @@ ei2 = sig .* Gaussian_PDF(z);
 EIM = (ei1 + ei2);
 f = -EIM;
 end
+
+function f = infill_MOobjective(mdl, x, fmin)
+
+f1 =  infill_EIobjective(mdl, x, fmin);
+f2 =  infill_objective(mdl, x);
+f = [f1, f2];
+end
+
 
 function c = infill_constraints(x)
 c = [];
@@ -217,26 +238,31 @@ pause(0.5);
 
 end
 
-function [trgx, trgf] = trgdata_extension_withDistCheck(trgx, trgf, newx, newf, lb, ub)
-trgx_norm = (trgx - lb) ./ (ub - lb);
-newx_norm = (newx - lb) ./ (ub - lb);
-
-[dist, I] = pdist2(trgx_norm, newx_norm, 'euclidean', 'Smallest', 1);
-
-if dist < 1e-6 % new point is too close
-    if  newf < trgf(I)  % new point is better
-        trgx(I, :) = [];
-        trgf(I, :) = [];
+function [trgx, trgf] = trgdata_extension_withDistCheck(trgx, trgf, newxm, newfm, lb, ub)
+% accomodate multiple points
+n = size(newxm, 1);
+for in = 1:n
+    newx = newxm(in, :);
+    newf = newfm(in, :);
+    trgx_norm = (trgx - lb) ./ (ub - lb);
+    newx_norm = (newx - lb) ./ (ub - lb);
+    
+    [dist, I] = pdist2(trgx_norm, newx_norm, 'euclidean', 'Smallest', 1);
+    
+    if dist < 1e-6 % new point is too close
+        if  newf < trgf(I)  % new point is better
+            trgx(I, :) = [];
+            trgf(I, :) = [];
+            trgx = [trgx; newx];
+            trgf = [trgf; newf];
+        end
+        % else no change
+    else
         trgx = [trgx; newx];
         trgf = [trgf; newf];
     end
-    % else no change
-else
-    trgx = [trgx; newx];
-    trgf = [trgf; newf];
+    
 end
-
-
 
 
 end
