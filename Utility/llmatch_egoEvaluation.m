@@ -178,7 +178,7 @@ end
 
 num_xvar = prob.n_lvar;
 
-select_hn =  'output_selection(fronts, pop)';
+
 select_hn = @output_selection;
 [best_x, best_f, best_c, archive_search] = ego_solver(funh_obj, num_xvar, prob.xl_bl, prob.xl_bu, initmatrix, funh_con, param, 'visualize', false,'infill', 3, 'gsolver_outputselect', select_hn);
 

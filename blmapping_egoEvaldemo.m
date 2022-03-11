@@ -47,8 +47,8 @@ funh_external = @(pop)up_probrecord(pop);
 funh_obj = @(x)up_objective_func(prob, x, use_seeding, seeding_strategy, thr);
 funh_con = @(x)up_constraint_func();
 
-param.gen = 9;
-param.popsize = 50;
+param.gen = 19;
+param.popsize = 25;
 lb = prob.xu_bl; 
 ub = prob.xu_bu;
 num_xvar = prob.n_uvar;
@@ -130,9 +130,11 @@ funh_con = @(x)re_evalcons(x); % re-use same outcome function
 
 % apply believer Kriging
 param.maxFE = 150;
-param.initsize = 20;
+param.initsize = 50;
 num_xvar = prob.n_lvar;
-[best_x, best_f, best_c, archive_search] = ego_solver(funh_obj, num_xvar, prob.xl_bl, prob.xl_bu, initmatrix, funh_con, param, 'visualize', false, 'infill', 2);
+
+select_hn = @output_selection;
+[best_x, best_f, best_c, archive_search] = ego_solver(funh_obj, num_xvar, prob.xl_bl, prob.xl_bu, initmatrix, funh_con, param,'visualize', false, 'infill', 3, 'gsolver_outputselect', select_hn);
 
 % follow local search
 local_FE = 50;

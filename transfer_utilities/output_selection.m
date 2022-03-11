@@ -38,8 +38,21 @@ if nf1 >= 3
 else
     % only choose corners, because only the first front went through crowding
     % sort 
-    best_f = pop.F(fronts(1).f, :);
-    best_x = pop.X(fronts(1).f, :);    
+
+    front1_F = pop.F;
+    front1_X = pop.X;
+    
+    % pick up two corners
+    [~, corner_indx] =  min(front1_F, [], 1);
+    corner1 =  front1_F(corner_indx(1), :);
+    corner2 =  front1_F(corner_indx(2), :);
+   
+    corner1x =  front1_X(corner_indx(1), :);
+    corner2x =  front1_X(corner_indx(2), :);
+
+
+    best_f = [corner1;  corner2];
+    best_x = [corner1x; corner2x];
 end
 
 end
