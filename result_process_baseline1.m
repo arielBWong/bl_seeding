@@ -3,7 +3,7 @@ problem_folder = strcat(pwd,'/problems/TP3');
 addpath(problem_folder);
 
 
-thr = -110;
+
 problems_2 = cell(1, 1);
 
 % problems_2{1} =  { 'smd1(1, 2 , 1)' , 'smd2(1, 2, 1)',  'smd3(1, 2, 1)', ...
@@ -40,7 +40,13 @@ problems_2{1} = { 'smd1mp(1, 2, 1)' , 'smd2mp(1, 2, 1)',  'smd3mp(1, 2, 1)', 'sm
     'smd5mp(1, 2, 1)', 'smd6mp(1, 0, 2, 1)', 'smd7mp(1, 2, 1)',  'smd8mp(1, 2, 1)',...
     'smd1(1, 2, 1)' , 'smd2(1, 2, 1)',  'smd3(1, 2, 1)', 'smd4(1, 2, 1)', ...
      'smd5(1, 2, 1)' , 'smd6(1, 2, 1)',  'smd7(1, 2, 1)', 'smd8(1, 2, 1)'};
+ 
+ 
+problems_2{1} =  {'smd1mp(1, 2, 1)' , 'smd2mp(1, 2, 1)',  'smd3mp(1, 2, 1)', 'smd4mp(1, 2, 1)', ...
+    'smd6mp(1, 0, 2, 1)', 'smd7mp(1, 2, 1)',  'smd8mp(1, 2, 1)'};
 postfix = '';
+ 
+thr = -110;
  
 % problems_2{1} = { 'smd2mp(1, 2, 1)',   'smd4mp(1, 2, 1)'};
 % postfix = '_300FE';
@@ -48,7 +54,7 @@ postfix = '';
 for is = 1:length(problems_2)
     % methods = {'_baseline_ea', '_seeding_strategy_1', '_seeding_strategy_3'};
     methods = {'_baseline_ea',  '_seeding_strategy_2',  '_seeding_strategy_3'};
-    %methods = {'_seeding_strategy_2'};
+    %methods = {'_seeding_strategy_3'};
     problems = problems_2{is};
     prob_test = eval(problems{1});
     nv = prob_test.n_lvar;
@@ -73,8 +79,8 @@ for is = 1:length(problems_2)
 
     % methods = { '_seeding_strategy_2',  '_seeding_strategy_3'};
     % methods = {  '_seeding_strategy_3'};
-    % FE_analysis(problems, methods, resultfolder, np, seed, mseed, outfoldername) ;
-    plot_convergence(problems, methods, resultfolder, np, seed, mseed, outfoldername);
+    FE_analysis(problems, methods, resultfolder, np, seed, mseed, outfoldername) ;
+    % plot_convergence(problems, methods, resultfolder, np, seed, mseed, outfoldername);
     
     % plot_errornum(problems, methods, resultfolder, np, seed, mseed, outfoldername);
 
@@ -82,7 +88,7 @@ for is = 1:length(problems_2)
     % switch_ratio(problems, methods, resultfolder, seed, mseed,outfoldername);
 
     % methods = {'_baseline_ea',  '_seeding_strategy_1'};
-   % acccuracy_baseline(problems, methods, resultfolder, np, seed, mseed, 2, outfoldername);
+    % acccuracy_baseline(problems, methods, resultfolder, np, seed, mseed, 2, outfoldername);
 end
 
 function [] =  plot_errornum(problems, methods, resultfolder, np, seed, mseed, outfoldername)
@@ -108,7 +114,7 @@ for p = 1:np
             savename = fullfile(resultfolder, foldername, filename);
             fu_singleseed = csvread(savename);
             
-            fu = reshape(fu_singleseed, [50, 10] );
+            fu = reshape(fu_singleseed, [25, 20] );
             fu = fu';
             fu = fu<0;
             fu = sum(fu, 2);
@@ -130,7 +136,7 @@ for p = 1:np
     ylabel('Mean number of errors');
     legend('LL-EGO baseline', 'LL-EGO Cokriging', 'LL-EGO Neighbor', 'Location','northwest');
     title(prob.name);
-    name = strcat(prob.name, '_LLerror_comparison.png');
+    name = strcat(prob.name, '_Swtich_newsetting_LLerror_comparison.png');
     
     saveas(gcf, name)
     

@@ -35,12 +35,12 @@ addpath(problem_folder);
 %     'smd1(1, 2 , 1)' , 'smd2(1, 2, 1)',  'smd3(1, 2, 1)', ...
 %     'smd4(1, 2, 1)', 'smd6(1, 0, 2, 1)', };
 
-% tic;
-% blmapping_egoEvaldemo('smd7mp(1, 2, 1)',  1, 'use_seeding', false, 'seeding_strategy', 0, 'threshold', 0);
-% toc;
+tic;
+blmapping_egoEvaldemo('smd1mp(1, 2, 1)',  1, 'use_seeding', true, 'seeding_strategy', 2, 'threshold', -1.1);
+toc;
 %
 
-
+a =0;
 % 
 % problem_sets = cell(1, 1);
 % 

@@ -43,7 +43,7 @@ else
     switch_lls = []; 
 end
 
-C_pop     = funh_con(X_pop);
+C_pop = funh_con(X_pop);
 [~,ids,~] = nd_sort(F_pop, (1:size(F_pop,1))');
 
 % Storing relevant information pop and archive

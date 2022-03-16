@@ -10,11 +10,11 @@ p = inputParser;
 addRequired(p, 'upper_xu');
 addRequired(p, 'prob');
 addParameter(p, 'visualization', false);
-addParameter(p, 'seeding_only', false);     % conduct seeding controller
-addParameter(p, 'archive_xu', []);          % upper level all evaluated xu
-addParameter(p, 'archive_xl', []);          % lower level matching xl, might larger than xu due to asynsic update
+addParameter(p, 'seeding_only', false);      % conduct seeding controller
+addParameter(p, 'archive_xu', []);               % upper level all evaluated xu
+addParameter(p, 'archive_xl', []);                % lower level matching xl, might larger than xu due to asynsic update
 addParameter(p, 'seeding_strategy', 1);     % 1 nearest neighbour 2 cokrging starting
-addParameter(p, 'threshold', 0.9);          % 1 nearest neighbour 2 cokrging starting
+addParameter(p, 'threshold', 0.9);              % 1 nearest neighbour 2 cokrging starting
 parse(p, upper_xu, prob, xl_probe, varargin{:});
 % -----------------------------------
 
@@ -177,7 +177,6 @@ end
 % apply believer Kriging
 
 num_xvar = prob.n_lvar;
-
 
 select_hn = @output_selection;
 [best_x, best_f, best_c, archive_search] = ego_solver(funh_obj, num_xvar, prob.xl_bl, prob.xl_bu, initmatrix, funh_con, param, 'visualize', false,'infill', 3, 'gsolver_outputselect', select_hn);

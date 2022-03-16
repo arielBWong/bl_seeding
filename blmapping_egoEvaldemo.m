@@ -34,7 +34,6 @@ prob = eval(prob_str);
 % if existing
 %     return;
 % end
-
 %------------------Process starts--------------------
 % insert global search
 
@@ -71,7 +70,7 @@ lower_mdl = {};
 lower_trg = {};
 lower_decisionSwitch =[];
 
-[best_x, ~, ~, ~, ~] = gsolver(funh_obj, num_xvar, lb, ub, initmatrix, funh_con, param,  'externalfunction', funh_external,  'visualize', false);
+[best_x, ~, ~, ~, ~] = gsolver(funh_obj, num_xvar, lb, ub, initmatrix, funh_con, param,  'externalfunction', funh_external,  'visualize', false, 'extra_infoprob', prob);
 
 
 % Re-evaluation post process
@@ -82,7 +81,7 @@ fu_lastpop = prob.evaluate_u(xu_lastpop, xl_lastpop);                       % la
 
 lowertrgdata_lastpop = lower_trg(end - param.popsize + 1 : end);
 switch_lastpop = lower_decisionSwitch(end - param.popsize + 1 : end);
-indx_reeval = zeros(param.popsize, 1);                                      % re-evaluation index
+indx_reeval = zeros(param.popsize, 1);                                               % re-evaluation index
 
 
 selected_xu = xu_lastpop(1, :);

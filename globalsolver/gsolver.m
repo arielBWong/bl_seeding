@@ -34,6 +34,7 @@ addRequired(p,   'param');
 addParameter(p,  'externalfunction', []);
 addParameter(p,  'visualize', false);
 addParameter(p, 'output_selection', []);
+addParameter(p, 'extra_infoprob', []);
 parse(p, funh_obj, num_xvar, lb, ub, initmatrix, funh_con, param, varargin{:});
 %-------
 
@@ -47,7 +48,7 @@ param = p.Results.param;
 external_funh= p.Results.externalfunction;
 visualize = p.Results.visualize;
 output_selection = p.Results.output_selection;
-
+extra_infoprob = p.Results.extra_infoprob;
 
 %-----------
 external_return = [];
@@ -93,7 +94,9 @@ while gen <= param.gen
     child.X = generate_child2(lb, ub, pop, param);
     
     % Evaluate and Order(need to test varargin)
-    [pop, archive]= evaluate_order(pop, archive, funh_obj, funh_con, child.X, gen, param);
+    % [pop, archive]= evaluate_order(pop, archive, funh_obj, funh_con, child.X, gen, param);
+    
+     [pop, archive]= evaluate_order2(pop, archive, funh_obj, funh_con, child.X, gen, param, 'prob', extra_infoprob);
     
     % Reduce 2N to N
     [pop]=reduce_pop(pop,param.popsize);
