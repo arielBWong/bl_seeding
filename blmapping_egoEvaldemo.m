@@ -96,17 +96,19 @@ for ip = 1 : param.popsize
      if indx_reeval(1, 1) == 0  % &&  switch_lastpop(1) == 1  % 1 means local search
         indx_reeval(1) = 1;
         
-        [xl_reeval, extraFE] = re_evaluation(prob, xu_lastpop(1, :), xl_lastpop(1, :)); % always reevaluate top one
+        [xl_reeval, extraFE] = re_evaluation(prob, xu_lastpop(1, :), xl_lastpop(1, :), lowertrgdata_lastpop(1)); % always reevaluate top one
        
         extra_lowerEval = extra_lowerEval + extraFE - 1;
         fu_reeval = prob.evaluate_u(xu_lastpop(1, :), xl_reeval);
         fu_lastpop(1, :) = fu_reeval;   % replace existing value;
         xl_lastpop(1, :) = xl_reeval;
+        
         [~, idx] = sort(fu_lastpop);
         
         xu_lastpop = xu_lastpop(idx, : );
         xl_lastpop = xl_lastpop(idx, :);
         fu_lastpop = fu_lastpop(idx, :);
+        lowertrgdata_lastpop = lowertrgdata_lastpop(idx);
         
         % lowertrgdata_lastpop = lowertrgdata_lastpop(idx);
         switch_lastpop = switch_lastpop(idx);
@@ -121,11 +123,11 @@ save_results(upper_xu, lower_xl, prob,  selected_xu, selected_xl, seed, use_seed
 
 end
 
-function [xl_reeval, extraFE] = re_evaluation(prob, xu, xl)
+function [xl_reeval, extraFE] = re_evaluation(prob, xu, xl, ll_trgdata)
 %
-initmatrix = xl;
+initmatrix = ll_trgdata;
 funh_obj = @(x)prob.evaluate_l(xu, x);
-funh_con = @(x)re_evalcons(x); % re-use same outcome function
+funh_con = @(x)re_evalcons(x);                           % re-use same outcome function
 
 % apply believer Kriging
 param.maxFE = 150;

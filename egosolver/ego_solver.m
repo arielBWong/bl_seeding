@@ -81,7 +81,7 @@ mdl = oodacefit(trgx, trgf);
 
 n = 1;
 
-if  infill== 2 || infill == 1
+if  infill == 2 || infill == 1  % infill one at a time
     nmax = param.maxFE - param.initsize;
 end
 
@@ -110,8 +110,6 @@ while n <= nmax
     
     
     infill_con = @(x)infill_constraints(x);
-    
-    % initmatrix is set early in this method;
     [next_x, ~, ~, ~, ~] = gsolver(infill_obj, num_xvar, lb, ub, [], infill_con, ea_param, 'visualize', false, 'output_selection', gsolver_outputselect);
     
     % add to trg data
@@ -133,8 +131,6 @@ while n <= nmax
     mdl = oodacefit(trgx, trgf);
     n = n + 1;
 end
-
-
 
 % select best solution
 [~, idx] = sort(trgf);
