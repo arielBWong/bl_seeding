@@ -59,6 +59,7 @@ global lower_eval
 global lower_mdl
 global lower_trg
 global lower_decisionSwitch
+global lower_evalchildren
 global g
 g = 1;
 
@@ -66,6 +67,7 @@ upper_xu = [];
 lower_xl = [];
 
 lower_eval = 0;
+lower_evalchildren = [];
 lower_mdl = {};
 lower_trg = {};
 lower_decisionSwitch =[];
@@ -96,7 +98,7 @@ for ip = 1 : param.popsize
      if indx_reeval(1, 1) == 0  % &&  switch_lastpop(1) == 1  % 1 means local search
         indx_reeval(1) = 1;
         
-        [xl_reeval, extraFE] = re_evaluation(prob, xu_lastpop(1, :), xl_lastpop(1, :), lowertrgdata_lastpop(1)); % always reevaluate top one
+        [xl_reeval, extraFE] = re_evaluation(prob, xu_lastpop(1, :), xl_lastpop(1, :), lowertrgdata_lastpop{1}); % always reevaluate top one
        
         extra_lowerEval = extra_lowerEval + extraFE - 1;
         fu_reeval = prob.evaluate_u(xu_lastpop(1, :), xl_reeval);
@@ -125,7 +127,7 @@ end
 
 function [xl_reeval, extraFE] = re_evaluation(prob, xu, xl, ll_trgdata)
 %
-initmatrix = ll_trgdata;
+initmatrix = ll_trgdata(:, 1:end-1);
 funh_obj = @(x)prob.evaluate_l(xu, x);
 funh_con = @(x)re_evalcons(x);                           % re-use same outcome function
 
@@ -186,7 +188,7 @@ function [output] =  up_objective_func(prob, xu, use_seeding, seeding_strategy, 
 global upper_xu
 global lower_xl
 global g
-
+global lower_evalchildren
 % upper xu and lower level does not change at the same time,
 % upper_xu changes in generation wise, lower_xl changes in each xu's
 % evaluation step. they should eventually have the same size.
@@ -204,8 +206,7 @@ for i = 1:m
     fprintf('gen %d, ind %d \n ', g, i);
     xui = xu(i, :);  
 
-
-    [match_xl, mdl, trgdata, lower_searchSwitchFlag] = llmatch_egoEvaluation(xui, prob, ...
+    [match_xl, mdl, trgdata, lower_searchSwitchFlag, single_lleval] = llmatch_egoEvaluation(xui, prob, ...
         'archive_xu', upper_xu, 'archive_xl', lower_xl,...
         'seeding_only', use_seeding,  'seeding_strategy', seeding_strategy, ...
         'visualization', vis, 'threshold', thr);
@@ -218,6 +219,8 @@ for i = 1:m
     mdls{end+1} = mdl;
     trgdatas{end+1} = trgdata;
     lower_searchSwitchFlags = [lower_searchSwitchFlags; lower_searchSwitchFlag];
+    
+    lower_evalchildren = [lower_evalchildren; single_lleval];
 end
 fprintf('\n');
 
@@ -260,6 +263,8 @@ end
 end
 
 function  save_results(xu, xl, prob, selected_xu, selected_xl, seed, use_seeding,  lower_eval, extra_lowerEval, seeding_strategy, lower_decisionSwitch, thr, lower_trg)
+
+global lower_evalchildren
 
 [fu, cu] = prob.evaluate_u(xu, xl);   % lazy  step
 [fl, cl] = prob.evaluate_l(xu, xl);
@@ -313,6 +318,23 @@ save(savename,  'lower_decisionSwitch');
 filename = strcat('lowerTrgdata_seed_',  num2str(seed), '.mat');
 savename = fullfile(resultfolder, filename);
 save(savename,  'lower_trg');
+
+
+filename = strcat('lower_evalchildren_seed_',  num2str(seed), '.csv');
+savename = fullfile(resultfolder, filename);
+csvwrite(savename,lower_evalchildren);
+
+
+
+filename = strcat('selectedxu_seed_',  num2str(seed), '.csv');
+savename = fullfile(resultfolder, filename);
+csvwrite(savename, selected_xu);
+
+
+filename = strcat('selectedxl_seed_',  num2str(seed), '.csv');
+savename = fullfile(resultfolder, filename);
+csvwrite(savename, selected_xl);
+
 
 if size(fu, 2) > 1
     % fu nd front

@@ -1,5 +1,5 @@
-function[match_xl, mdl, trgdata, lower_searchSwitchFlag] = llmatch_egoEvaluation(upper_xu, prob, xl_probe, varargin)
-% method of searching for a match xl for xu.
+function[match_xl, mdl, trgdata, lower_searchSwitchFlag, single_lleval] = llmatch_egoEvaluation(upper_xu, prob, xl_probe, varargin)
+% Method of searching for a match xl for xu.
 % Problem(Prob) definition require certain formation for bilevel problems
 % evaluation method should be of  form 'evaluation_l(xu, xl)'
 %--------------------------------------------------------------------------
@@ -33,6 +33,7 @@ global lower_eval
 global lower_trg
 %-------------------------------------------------
 
+single_lleval = 0;
 cokrg_samplesize = 20;
 mdl = 'position_holder';
 trgdata = 'position_holder';
@@ -46,16 +47,17 @@ param.initsize = 50;
 
 %-- lower level initialization
 % include seeding xl
-if ~isempty(archive_xu) && seeding_only % first generation on the upper level use global search
+if ~isempty(archive_xu) && seeding_only              % first generation on the upper level use global search
     % ideal_xl = prob.get_xlprime(xu);
-    maxFE = 200;    % maxFE for local search
-
-    if seeding_strategy == 1  % closest landscape
+    maxFE = 200;                                                    % maxFE for local search
+    if seeding_strategy == 1                                    % closest landscape
         [~, idx]= pdist2(archive_xu, xu, 'euclidean', 'Smallest', 1);  % this xu is upper level new infill xu, not added into archive_xu
         close_optxl =  archive_xl(idx, :);
         [match_xl, ~, history, output] = lowerlevel_fmincon(close_optxl, maxFE, prob.xl_bl, prob.xl_bu, funh_obj, funh_con);
 
         lower_eval = lower_eval + output.funcCount;
+        single_lleval = single_lleval + output.funcCount;
+        
         trgdata = [history.x, history.fval];
         lower_searchSwitchFlag = 1;
         return;
@@ -82,7 +84,10 @@ if ~isempty(archive_xu) && seeding_only % first generation on the upper level us
             maxFE = maxFE - size(cokrg_trg.expensive_x, 1);
 
             % expensive_x is counted inside cokrg_localsearch
+            before_FE = lower_eval;
             [match_xl, lower_eval, trgdata, localsearch_fail, cokrg_mdl] = cokrg_localsearch(xu, prob, cokrg_trg, lower_eval, maxFE);
+            after_FE = lower_eval;
+            single_lleval = single_lleval + after_FE - before_FE;
 
             % if cokrging propose a point on boundary
             if localsearch_fail
@@ -131,6 +136,9 @@ if ~isempty(archive_xu) && seeding_only % first generation on the upper level us
             trgdata = [expensive_x, expensive_f;  ...
                 history.x, history.fval];
             lower_eval = lower_eval + size(expensive_x, 1) + output.funcCount;
+            
+            single_lleval = single_lleval + size(expensive_x, 1) + output.funcCount;
+            
             lower_searchSwitchFlag = 1;
 
 
@@ -147,7 +155,6 @@ if ~isempty(archive_xu) && seeding_only % first generation on the upper level us
                 %     plot2d_withNeighbor(xu, prob.xl_bl, prob.xl_bu, match_xl, close_optxl, prob, close_optxu)
                 %  end
             end
-
             return;
         else
             initmatrix = expensive_x;
@@ -188,7 +195,13 @@ local_FE = 50;
 localdata = [history.x, history.fval];
 
 % recordings
-lower_eval = lower_eval + param.maxFE - size(initmatrix, 1) + output.funcCount;  % initmatrix counted into  lower_eval in method cokrg_localsearch
+% lower_eval = lower_eval + param.maxFE - size(initmatrix, 1) + output.funcCount;  % initmatrix counted into  lower_eval in method cokrg_localsearch
+% should not minus initmatrix size, as already deducted from previous
+% process
+lower_eval = lower_eval + param.maxFE + output.funcCount;  % initmatrix counted into  lower_eval in method cokrg_localsearch
+
+single_lleval = single_lleval + param.maxFE + output.funcCount;
+
 match_xl = xsol;
 trgdata = [archive_search.sols(:, 2: prob.n_lvar + 1), archive_search.sols(:, prob.n_lvar + 2: end)];
 trgdata = [trgdata; localdata];

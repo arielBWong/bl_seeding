@@ -39,8 +39,6 @@ if nf1 >= 3
     rest_frontnorm = front1_Fnorm;
     
     
-    
-    
     % find middle point of normalized
     d = pdist2(rest_frontnorm, corners_norm,  'euclidean');
     d = abs(d(:, 1) - d(:, 2));   % only two corners
