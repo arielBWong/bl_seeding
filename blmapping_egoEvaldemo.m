@@ -60,6 +60,8 @@ global lower_mdl
 global lower_trg
 global lower_decisionSwitch
 global lower_evalchildren
+global lower_childrenx
+global lower_childrenf
 global g
 g = 1;
 
@@ -68,6 +70,8 @@ lower_xl = [];
 
 lower_eval = 0;
 lower_evalchildren = [];
+lower_childrenx = [];
+lower_childrenf = [];
 lower_mdl = {};
 lower_trg = {};
 lower_decisionSwitch =[];
@@ -189,6 +193,8 @@ global upper_xu
 global lower_xl
 global g
 global lower_evalchildren
+global lower_childrenx
+global lower_childrenf
 % upper xu and lower level does not change at the same time,
 % upper_xu changes in generation wise, lower_xl changes in each xu's
 % evaluation step. they should eventually have the same size.
@@ -221,6 +227,11 @@ for i = 1:m
     lower_searchSwitchFlags = [lower_searchSwitchFlags; lower_searchSwitchFlag];
     
     lower_evalchildren = [lower_evalchildren; single_lleval];
+    lower_childrenx = [lower_childrenx; xl];
+    lower_childrenf = [lower_childrenf; f];  % infact it is fu
+    
+    
+    
 end
 fprintf('\n');
 
@@ -265,6 +276,8 @@ end
 function  save_results(xu, xl, prob, selected_xu, selected_xl, seed, use_seeding,  lower_eval, extra_lowerEval, seeding_strategy, lower_decisionSwitch, thr, lower_trg)
 
 global lower_evalchildren
+global lower_childrenx
+global lower_childrenf
 
 [fu, cu] = prob.evaluate_u(xu, xl);   % lazy  step
 [fl, cl] = prob.evaluate_l(xu, xl);
@@ -324,7 +337,14 @@ filename = strcat('lower_evalchildren_seed_',  num2str(seed), '.csv');
 savename = fullfile(resultfolder, filename);
 csvwrite(savename,lower_evalchildren);
 
+filename = strcat('lower_childrenPopx_seed_',  num2str(seed), '.csv');
+savename = fullfile(resultfolder, filename);
+csvwrite(savename,  lower_childrenx);
 
+
+filename = strcat('lower_childrenFu_seed_',  num2str(seed), '.csv');
+savename = fullfile(resultfolder, filename);
+csvwrite(savename, lower_childrenf);
 
 filename = strcat('selectedxu_seed_',  num2str(seed), '.csv');
 savename = fullfile(resultfolder, filename);
