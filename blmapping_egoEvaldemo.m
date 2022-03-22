@@ -46,8 +46,8 @@ funh_external = @(pop)up_probrecord(pop);
 funh_obj = @(x)up_objective_func(prob, x, use_seeding, seeding_strategy, thr);
 funh_con = @(x)up_constraint_func();
 
-param.gen = 19;
-param.popsize = 25;
+param.gen = 2;
+param.popsize = 10;
 lb = prob.xu_bl; 
 ub = prob.xu_bu;
 num_xvar = prob.n_uvar;
@@ -227,8 +227,8 @@ for i = 1:m
     lower_searchSwitchFlags = [lower_searchSwitchFlags; lower_searchSwitchFlag];
     
     lower_evalchildren = [lower_evalchildren; single_lleval];
-    lower_childrenx = [lower_childrenx; xl];
-    lower_childrenf = [lower_childrenf; f];  % infact it is fu
+    lower_childrenx = [lower_childrenx; match_xl];
+    lower_childrenf = [lower_childrenf; fi];  % infact it is fu
     
     
     
