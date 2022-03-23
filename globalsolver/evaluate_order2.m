@@ -105,10 +105,11 @@ if ~isempty(pop.switch_lls)
         
         
         % Can I change it to more efficient in terms of convergence?
+
         
         
         % resort
-        pop =  pop_sortReval(pop);
+        % pop =  pop_sortReval(pop);
         
     end
 end
