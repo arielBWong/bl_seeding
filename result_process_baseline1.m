@@ -126,9 +126,9 @@ for p = 1:np
                  FE_count = [FE_count; newcount];
                  
                  fu_last = parent_fu((ig - 2)*pop + 1 : (ig - 1)*pop);                          % parents are last generation 
-                 children_fu_current = child_fu( (ig-1) * pop + 1 : (ig - 1) * pop + ip);       % children are current generation
+                 % children_fu_current = child_fu( (ig-1) * pop + 1 : (ig - 1) * pop + ip);       % children are current generation
 
-                 Fu_newcount = min([fu_last; children_fu_current]);
+                 Fu_newcount = fu_last(1); %  min([fu_last; children_fu_current]);
                  Fu_count = [Fu_count; Fu_newcount];
 
             end
@@ -141,8 +141,6 @@ for p = 1:np
         fighn = figure(1);
         plot(FE_count, Fu_count, 'LineWidth', 2, 'Color', cl{m}); hold on;
 
-
-
     end
 
     xlabel('FEs');
@@ -150,7 +148,6 @@ for p = 1:np
     legend('LL-EGO baseline', 'LL-EGO Cokriging', 'LL-EGO Neighbor', 'Location','eastoutside');
     title(prob.name);
     name = strcat(prob.name, '_FEconvergence_comparison.png');
-
     saveas(gcf, name)
 
     close(fighn);

@@ -46,8 +46,8 @@ funh_external = @(pop)up_probrecord(pop);
 funh_obj = @(x)up_objective_func(prob, x, use_seeding, seeding_strategy, thr);
 funh_con = @(x)up_constraint_func();
 
-param.gen = 2;
-param.popsize = 10;
+param.gen = 19;
+param.popsize = 25;
 lb = prob.xu_bl; 
 ub = prob.xu_bu;
 num_xvar = prob.n_uvar;
@@ -217,7 +217,7 @@ for i = 1:m
         'seeding_only', use_seeding,  'seeding_strategy', seeding_strategy, ...
         'visualization', vis, 'threshold', thr);
     
-    vis =  false;
+    vis = false;
     fi = prob.evaluate_u(xui, match_xl);
     
     xl = [xl; match_xl];
@@ -234,7 +234,6 @@ for i = 1:m
     
 end
 fprintf('\n');
-
 g = g + 1;
 
 output.f = f;
