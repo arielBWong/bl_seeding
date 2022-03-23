@@ -14,13 +14,14 @@ problems_2{1} = { 'smd1mp(1, 2, 1)' , 'smd2mp(1, 2, 1)',  'smd3mp(1, 2, 1)', 'sm
     'smd1(1, 2, 1)' , 'smd2(1, 2, 1)',  'smd3(1, 2, 1)', 'smd4(1, 2, 1)', ...
      'smd5(1, 2, 1)' , 'smd6(1, 2, 1)',  'smd7(1, 2, 1)', 'smd8(1, 2, 1)'};
 
+problems_2{1} = {'smd3mp(1, 2, 1)' , 'smd4mp(1, 2, 1)',  'smd3(1, 2, 1)', 'smd4(1, 2, 1)'};
 postfix = '';
 thr = -110;
  
 for is = 1:length(problems_2)
     % methods = {'_baseline_ea', '_seeding_strategy_1', '_seeding_strategy_3'};
     methods = {'_baseline_ea',  '_seeding_strategy_2',  '_seeding_strategy_3'};
-    %methods = {'_seeding_strategy_3'};
+    % methods = {'_seeding_strategy_2'};
     problems = problems_2{is};
     prob_test = eval(problems{1});
     nv = prob_test.n_lvar;
@@ -41,13 +42,13 @@ for is = 1:length(problems_2)
     end
 
     % lastpop_missleadingrate(problems, methods, resultfolder, np, seed, mseed, outfoldername);
-    accuracy_extraction(problems, methods, resultfolder, np, seed, mseed, sigTestIndex, outfoldername);
+    % accuracy_extraction(problems, methods, resultfolder, np, seed, mseed, sigTestIndex, outfoldername);
 
     % methods = { '_seeding_strategy_2',  '_seeding_strategy_3'};
     % methods = {  '_seeding_strategy_3'};
     % FE_analysis(problems, methods, resultfolder, np, seed, mseed, outfoldername) ;
     % plot_convergence(problems, methods, resultfolder, np, seed, mseed, outfoldername);
-    
+    plot_withFE(problems, methods, resultfolder, np, seed, mseed, outfoldername)
     % plot_errornum(problems, methods, resultfolder, np, seed, mseed, outfoldername);
 
     % methods = { '_seeding_strategy_2', '_seeding_strategy_3', };
@@ -57,126 +58,110 @@ end
 
 function [] = plot_withFE(problems, methods, resultfolder, np, seed, mseed, outfoldername)
 nm = length(methods);
-permethod_accuracy_up = {}; % upper save
-permethod_accuracy_down = {}; % lower save
+permethod_accuracy_up = {};                 % upper save
+permethod_accuracy_down = {};               % lower save
 
 prob = eval(problems{1});
 diff = 'mp';
 prefix = 'mix';
 
 cl = {'red', 'green', 'blue'};
+gen = 20;
+pop = 25;
 
-for m = 1:nm
-   
-    for p = 1:np
-        prob = eval(problems{p});
-        for s = 1: seed
-            filename = strcat('fu_seed_', num2str(s), '.csv');
-            foldername = strcat(prob.name, method{m});
+for p = 1:np
+    prob = eval(problems{p});
+    for m = 1:nm
+        for s = mseed
+            filename = strcat('lower_childrenFu_seed_', num2str(s), '.csv');
+            foldername = strcat(prob.name, methods{m});
             savename = fullfile(resultfolder, foldername, filename);
-            accuracy = csvread(savename);
+            child_fu = csvread(savename);
+            % child_fu = reshape(child_fu, [pop, gen]);
+            % child_fu = child_fu';
 
-            accuracy_up(p, s) = accuracy(1);
-            accuracy_low(p, s) = accuracy(2);
+            filename = strcat('Fu_seed_', num2str(s), '.csv');
+            foldername = strcat(prob.name, methods{m});
+            savename = fullfile(resultfolder, foldername, filename);
+            parent_fu = csvread(savename);
+            % parent_fu = reshape(parent_fu, [pop, gen]);
+            % parent_fu = parent_fu';
+
+            filename = strcat('lower_evalchildren_seed_', num2str(s), '.csv');
+            foldername = strcat(prob.name, methods{m});
+            savename = fullfile(resultfolder, foldername, filename);
+            children_evalnum = csvread(savename);
+            % children_evalnum = reshape(children_evalnum, [pop, gen]); 
+            % children_evalnum = children_evalnum';
+
+            filename = strcat('lowerlevelcount_seed_', num2str(s), '.csv');
+            foldername = strcat(prob.name, methods{m});
+            savename = fullfile(resultfolder, foldername, filename);
+            FinalFE = csvread(savename);
+            FinalFE = sum(FinalFE);
+
+            filename = strcat('selectedxu_seed_', num2str(s), '.csv');
+            foldername = strcat(prob.name, methods{m});
+            savename = fullfile(resultfolder, foldername, filename);
+            selected_xu = csvread(savename);
+
+            filename = strcat('selectedxl_seed_', num2str(s), '.csv');
+            foldername = strcat(prob.name, methods{m});
+            savename = fullfile(resultfolder, foldername, filename);
+            selected_xl = csvread(savename);
+
+
         end
+
+        % plot FE fu 
+        total_before_reeval = sum(children_evalnum(:));
+        FE_count = [];
+        Fu_count = [];
+
+        FE_count(1) = sum(children_evalnum(1 : pop));
+        Fu_count(1) = parent_fu(1, 1);
+        for ig = 2 : gen
+            for ip = 1 : pop
+                 newcount = FE_count(end) + children_evalnum((ig-1) * pop + ip);                % count one by one
+                 FE_count = [FE_count; newcount];
+                 
+                 fu_last = parent_fu((ig - 2)*pop + 1 : (ig - 1)*pop);                          % parents are last generation 
+                 children_fu_current = child_fu( (ig-1) * pop + 1 : (ig - 1) * pop + ip);       % children are current generation
+
+                 Fu_newcount = min([fu_last; children_fu_current]);
+                 Fu_count = [Fu_count; Fu_newcount];
+
+            end
+        end
+
+        FE_count = [FE_count; FinalFE];
+        final_fu = prob.evaluate_u(selected_xu, selected_xl);
+        Fu_count = [Fu_count; final_fu];
+        % ---
+        fighn = figure(1);
+        plot(FE_count, Fu_count, 'LineWidth', 2, 'Color', cl{m}); hold on;
+
+
+
     end
 
-    permethod_accuracy_up{m} = accuracy_up;
-    permethod_accuracy_down{m} = accuracy_low;
-end
+    xlabel('FEs');
+    ylabel('Best Fu');
+    legend('LL-EGO baseline', 'LL-EGO Cokriging', 'LL-EGO Neighbor', 'Location','eastoutside');
+    title(prob.name);
+    name = strcat(prob.name, '_FEconvergence_comparison.png');
 
-for ip = 1:np
-   prob = eval(problems{ip});
-   [~, id] = sort(permethod_accuracy_up{1}(ip, :));
-    nx1 = id(mseed);
-    
-    [~, id] = sort(permethod_accuracy_up{2}(ip, :));
-    nx2 = id(mseed);
-    
-    [~, id] = sort(permethod_accuracy_up{3}(ip, :));
-    nx3 = id(mseed);
-    
-    fighn = figure(1);
-    filename = strcat('fu_seed_', num2str(nx1), '.csv');
-    foldername = strcat(prob.name, method{1});
-    fu_filename = fullfile(resultfolder, foldername, filename);
-    fu1 = csvread(fu_filename);
-    idx = 1: 50: 451;
-    fu1 = fu1(idx);
-    
-    filename = strcat('final_accuracy_seed_', num2str(nx1), '.csv');
-    foldername = strcat(prob.name, method{1});
-    savename = fullfile(resultfolder, foldername, filename);
-    accuracy = csvread(savename);  
-    lastfu = prob.fu_prime  + accuracy(1);
-    fu1 = [fu1; lastfu];
-
-    
-    ax1 = subplot(1, 3, 1);
-    plot(fu1, 'LineWidth', 2, 'color', [0 0.4470 0.7410]);
-    title('LL-EGO baseline');
-    xlabel('gen');
-    ylabel('F_{u}',  'rotation', 0);
-    
-    
-
-    filename = strcat('fu_seed_', num2str(nx2), '.csv');
-    foldername = strcat(prob.name, method{2});
-    fu_filename = fullfile(resultfolder, foldername, filename);
-    fu2 = csvread(fu_filename);
-    idx = 1:50: 451;
-    fu2 = fu2(idx);
-    
-
-    filename = strcat('final_accuracy_seed_', num2str(nx2), '.csv');
-    foldername = strcat(prob.name, method{2});
-    savename = fullfile(resultfolder, foldername, filename);
-    accuracy = csvread(savename);  
-    lastfu = prob.fu_prime  + accuracy(1);
-    fu2 = [fu2; lastfu];
-    
-    ax2 = subplot(1, 3, 2);
-    plot(fu2, 'LineWidth', 2, 'color', [0.8500 0.3250 0.0980]);
-    title('Cokrg-LL-EGO');
-    xlabel('gen');
-    ylabel('F_{u}',  'rotation', 0);
-    
-    
-    filename = strcat('fu_seed_', num2str(nx3), '.csv');
-    foldername = strcat(prob.name, method{3});
-    fu_filename = fullfile(resultfolder, foldername, filename);
-    fu3 = csvread(fu_filename);
-    idx = 1: 50: 451;
-    fu3 = fu3(idx);
-    
-    filename = strcat('final_accuracy_seed_', num2str(nx3), '.csv');
-    foldername = strcat(prob.name, method{3});
-    savename = fullfile(resultfolder, foldername, filename);
-    accuracy = csvread(savename);  
-    lastfu = prob.fu_prime  + accuracy(1);
-    fu3 = [fu3; lastfu];
-        
-    
-    ax3 = subplot(1, 3, 3);
-    plot(fu3, 'LineWidth',2, 'color',[0.4660 0.6740 0.1880]);
-    title('Neighbor-LL-EGO');
-    
-    xlabel('gen');
-    ylabel('F_{u}',  'rotation', 0);
-    
-    linkaxes([ax1 ax2 ax3], 'xy');
-    % sgtitle('Convergence comparison over generations');
-    
-    name = strcat(prob.name,'_', num2str(prob.n_lvar), '_convergence comparison.png');
     saveas(gcf, name)
-    
+
     close(fighn);
-      
+
+end
+
 end
 
 
 
-end
+
 
 
 function [] =  plot_errornum(problems, methods, resultfolder, np, seed, mseed, outfoldername)
