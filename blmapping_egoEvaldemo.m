@@ -48,8 +48,8 @@ funh_external = @(pop)up_probrecord(pop);
 funh_obj = @(x)up_objective_func(prob, x, use_seeding, seeding_strategy, thr);
 funh_con = @(x)up_constraint_func();
 
-param.gen = 19;
-param.popsize = 25;
+param.gen = 5;
+param.popsize = 5;
 lb = prob.xu_bl; 
 ub = prob.xu_bu;
 num_xvar = prob.n_uvar;
@@ -67,12 +67,15 @@ global lower_evalchildren
 global lower_childrenx
 global lower_childrenf
 global predefined_FE
+global genCount
+
 global g
 g = 1;
 predefined_FE =  getfield(predefined_FE_allproblems, prob.name);
 
 upper_xu = [];
 lower_xl = [];
+genCount = [];
 
 lower_eval = 0;
 lower_evalchildren = [];
@@ -145,7 +148,8 @@ param.initsize = 50;
 num_xvar = prob.n_lvar;
 
 select_hn = @output_selection;
-[best_x, best_f, best_c, archive_search] = ego_solver(funh_obj, num_xvar, prob.xl_bl, prob.xl_bu, initmatrix, funh_con, param,'visualize', false, 'infill', 3, 'gsolver_outputselect', select_hn);
+[best_x, best_f, best_c, archive_search] = ego_solver(funh_obj, num_xvar, prob.xl_bl, prob.xl_bu, initmatrix, funh_con, param,'visualize', false, ...
+    'infill', 3, 'gsolver_outputselect', select_hn,  'initmatrix_asExtra', true);
 
 % follow local search
 local_FE = 50;
@@ -171,6 +175,9 @@ global lower_xl
 global lower_mdl
 global lower_trg
 global lower_decisionSwitch
+global lower_eval
+global genCount
+
 
 
 upper_xu = [upper_xu; pop.X];
@@ -178,7 +185,7 @@ lower_xl = [lower_xl; pop.A];
 lower_mdl = [lower_mdl, pop.Mdl];
 lower_trg = [lower_trg, pop.trgdata];
 lower_decisionSwitch = [lower_decisionSwitch;  pop.switch_lls];
-
+genCount = [genCount; lower_eval];
 
 % check the matching between lower_trg and lower_decisionSwitch
 % n = length(lower_trg);
@@ -212,6 +219,7 @@ xl = [];
 lower_searchSwitchFlags = [];
 mdls = {};
 trgdatas = {};
+LLcount = [];
 
 vis = false;
 output.termination_flag = false;
@@ -232,6 +240,7 @@ for i = 1:m
     mdls{end+1} = mdl;
     trgdatas{end+1} = trgdata;
     lower_searchSwitchFlags = [lower_searchSwitchFlags; lower_searchSwitchFlag];
+    LLcount = [LLcount; single_lleval];
 
     
     lower_evalchildren = [lower_evalchildren; single_lleval];
@@ -253,6 +262,7 @@ output.addon = xl;
 output.mdl = mdls;
 output.trgdata = trgdatas;
 output.lower_searchSwitchFlags = lower_searchSwitchFlags;
+output.LLcount = LLcount;
 
 end
 
@@ -289,6 +299,7 @@ function save_results(xu, xl, prob, selected_xu, selected_xl, seed, use_seeding,
 global lower_evalchildren
 global lower_childrenx
 global lower_childrenf
+global genCount
 
 [fu, cu] = prob.evaluate_u(xu, xl);   % lazy  step
 [fl, cl] = prob.evaluate_l(xu, xl);
@@ -365,6 +376,10 @@ csvwrite(savename, selected_xu);
 filename = strcat('selectedxl_seed_',  num2str(seed), '.csv');
 savename = fullfile(resultfolder, filename);
 csvwrite(savename, selected_xl);
+
+filename = strcat('genCount_seed_',  num2str(seed), '.csv');
+savename = fullfile(resultfolder, filename);
+csvwrite(savename, genCount);
 
 
 if size(fu, 2) > 1

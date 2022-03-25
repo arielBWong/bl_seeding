@@ -47,6 +47,7 @@ if isstruct(output)     % cumstomized
     child.Mdl = output.mdl;
     child.trgdata = output.trgdata;
     child.switch_lls = output.lower_searchSwitchFlags;
+    child.LLcount = output.LLcount;
 
     if output.termination_flag == true
         termination_flag = true;
@@ -58,6 +59,7 @@ else
     child.Mdl = {};
     child.trgdata = {};
     child.switch_lls = [];
+    child.LLcount = [];
 end
 
 
@@ -73,6 +75,7 @@ pop.A = [pop.A; child.A];   % add on
 pop.Mdl = [pop.Mdl, child.Mdl];
 pop.trgdata = [pop.trgdata, child.trgdata];
 pop.switch_lls = [pop.switch_lls; child.switch_lls];
+pop.LLcount = [pop.LLcount; child.LLcount];
 
 % [pop.F, pop.X, pop.C, pop.A, pop.Mdl, pop.trgdata] = pop_sort(pop.F, pop.X, pop.C, pop.A, pop.Mdl, pop.trgdata);
 pop = pop_sortCompact(pop);
@@ -80,8 +83,8 @@ pop = pop_sortCompact(pop);
 % check whether the first solution is local search
 % means local search
 if ~isempty(pop.switch_lls)
-    if pop.switch_lls(1) == 1
-        
+
+    if pop.switch_lls(1) == 1        
         % recalcualte the  lower level re-evaluation
         xu = pop.X(1, :);
         initmatrix = pop.trgdata{1};
@@ -92,8 +95,8 @@ if ~isempty(pop.switch_lls)
         select_hn = @output_selection;
         param.maxFE = 150;
         param.initsize = 50;
-        [best_x, best_f, best_c, archive_search] = ego_solver(funh_objego, num_xvar, prob.xl_bl, prob.xl_bu, initmatrix, funh_conego, param, 'visualize', false, 'infill', 3, 'gsolver_outputselect', select_hn);
-        
+        [best_x, best_f, best_c, archive_search] = ego_solver(funh_objego, num_xvar, prob.xl_bl, prob.xl_bu, initmatrix, funh_conego, param, 'visualize', false,...
+            'infill', 3, 'gsolver_outputselect', select_hn, 'initmatrix_asExtra', true);        
         
         % follow local search
         local_FE = 50;
@@ -103,19 +106,19 @@ if ~isempty(pop.switch_lls)
         
         trgdata = [archive_search.sols(:, 2: prob.n_lvar + 1), archive_search.sols(:, prob.n_lvar + 2: end)];
         trgdata = [trgdata; localdata];
-        
-        
+              
         pop.switch_lls(1) = 0;
         pop.F(1) = prob.evaluate_u(xu, xsol);
         pop.C = [];           % not considering constraints
         pop.A(1, :) =  xsol;
-        pop.trgdata(1) = {trgdata};
-        
-        
-        % Can I change it to more efficient in terms of convergence?
+        pop.trgdata(1) = {trgdata};   
+        pop.LLcount(1) = pop.LLcount(1) + param.maxFE + output.output.funcCount;
+
+        global lower_eval
+        lower_eval = lower_eval + param.maxFE + output.output.funcCount;
 
         
-        
+        % Can I change it to more efficient in terms of convergence?
         % resort
         pop =  pop_sortReval(pop);
         
@@ -174,6 +177,9 @@ if ~isempty(pop.switch_lls)
     pop.switch_lls = pop.switch_lls(ids);   % cell array
 end
 
+if ~isempty(pop.LLcount)
+    pop.LLcount = pop.LLcount(ids, :);
+end
 
 
 end

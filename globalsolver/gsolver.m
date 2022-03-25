@@ -94,8 +94,7 @@ while gen <= param.gen
     child.X = generate_child2(lb, ub, pop, param);
     
     % Evaluate and Order(need to test varargin)
-    % [pop, archive]= evaluate_order(pop, archive, funh_obj, funh_con, child.X, gen, param);
-    
+    % [pop, archive]= evaluate_order(pop, archive, funh_obj, funh_con, child.X, gen, param);    
     % [pop, archive]= evaluate_order2(pop, archive, funh_obj, funh_con, child.X, gen, param, 'prob', extra_infoprob);
 
     [pop, archive, termination_flag] = evaluate_order3(pop, archive, funh_obj, funh_con, child.X, gen, param, 'prob', extra_infoprob);

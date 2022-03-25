@@ -100,7 +100,7 @@ if infill == 3
     if initmatrix_asExtra
         nmax = floor((param.maxFE - param.initsize)/3);                    % infill three points at a time
     else
-        nmax = floor((param.maxFE - param.initsize)/3) - n_init;           % infill three points at a time
+        nmax = floor((param.maxFE - param.initsize - n_init)/3) ;           % infill three points at a time
     end
    
 end
@@ -146,8 +146,6 @@ while n <= nmax
     mdl = oodacefit(trgx, trgf);
     n = n + 1;
 end
-
-
 % ------
 
 
@@ -165,7 +163,7 @@ n = 1:size(trgx, 1);
 archive.sols = [n', trgx, trgf];
 
 if visualize
-    plot3d_infill(fighn, lb, ub, funh_obj, mdl, trgx, trgf, bestx, bestf, xl_prime);    
+   plot3d_infill(fighn, lb, ub, funh_obj, mdl, trgx, trgf, bestx, bestf, xl_prime);    
    close(fighn);
 end
 

@@ -36,6 +36,10 @@ if numcon == 0
     if ~isempty(pop.switch_lls)
         pop.switch_lls = pop.switch_lls(ids);   % cell array
     end
+
+    if ~isempty(pop.LLcount)
+        pop.LLcount = pop.LLcount(ids, :);
+    end
     
     
     

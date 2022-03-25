@@ -35,12 +35,14 @@ if isstruct(output) % customized
     Mdl_pop = output.mdl;
     trg_pop = output.trgdata;
     switch_lls = output.lower_searchSwitchFlags;
+    LLcount = output.LLcount;
 else
     F_pop   = output;
     A_pop   = [];
     Mdl_pop = {};
     trg_pop = {};
     switch_lls = []; 
+    LLcount = [];
 end
 
 C_pop = funh_con(X_pop);
@@ -81,6 +83,13 @@ if isempty(C_pop)
     pop.C = [];
 else
     pop.C = C_pop(ids, :);
+end
+
+
+if isempty(LLcount)
+    pop.LLcount = [];
+else
+    pop.LLcount = LLcount(ids, :);
 end
 
 % archive does not save dictionary type component
