@@ -34,6 +34,7 @@ addParameter(p, 'ea_param', []);
 addParameter(p, 'infill', 1); % 1 -- KB, 2 --EI
 addParameter(p, 'xl_prime', []);
 addParameter(p, 'gsolver_outputselect', []);
+addParameter(p, 'initmatrix_asExtra', false);
 parse(p, funh_obj, num_xvar, lb, ub, initmatrix, funh_con, param, varargin{:});
 
 %-------------------
@@ -50,6 +51,7 @@ ea_param = p.Results.ea_param;
 infill = p.Results.infill;
 xl_prime = p.Results.xl_prime;
 gsolver_outputselect= p.Results.gsolver_outputselect;
+initmatrix_asExtra = p.Results.initmatrix_asExtra;
 %-------------------
 
 external_return = [];
@@ -62,7 +64,7 @@ n_init = size(initmatrix, 1);
 n_rest = param.initsize;  % - n_init;
 
 trgx = repmat(lb, n_rest, 1) + repmat(ub - lb, n_rest, 1) .* lhsdesign(n_rest, num_xvar);
-trgf =  funh_obj(trgx);
+trgf = funh_obj(trgx);
 
 % add init with distance cautious
 for i = 1:n_init
@@ -76,33 +78,46 @@ if visualize
     fighn = figure(1);
 end
 
+%------------------------------------------------------
+
+
+
 %--- train model
 mdl = oodacefit(trgx, trgf);
 
 n = 1;
-
-if  infill == 2 || infill == 1  % infill one at a time
-    nmax = param.maxFE - param.initsize;
+if  infill == 2 || infill == 1  % infill one at a time  
+    if initmatrix_asExtra
+        % Means initmatrix is not interacting with infill, just being extra
+        nmax = param.maxFE - param.initsize;
+    else
+        % Means initmatrix takes up infill
+        nmax = param.maxFE - param.initsize - n_init;
+    end
 end
 
 if infill == 3
-    nmax =  floor((param.maxFE - param.initsize)/3); % infill three points at a time
+    if initmatrix_asExtra
+        nmax = floor((param.maxFE - param.initsize)/3);                    % infill three points at a time
+    else
+        nmax = floor((param.maxFE - param.initsize)/3) - n_init;           % infill three points at a time
+    end
+   
 end
 
 % infill process
 while n <= nmax
     % searching for next infill using believer
-    
-    ea_param.gen = 100;                    % design problem of gsolver, it should be 20
+    ea_param.gen = 100;                                                    % design problem of gsolver, it should be 20
     ea_param.popsize = 100;
     
-    if infill == 1 % KB
+    if infill == 1                                                         % KB
         infill_obj = @(x)infill_objective(mdl, x);
-    elseif infill== 2 % EI
+    elseif infill== 2                                                      % EI
         [~, idx] = sort(trgf);
         fmin = trgf(idx(1));
         infill_obj = @(x)infill_EIobjective(mdl, x, fmin);
-    else  % multiple infill point
+    else                                                                   % multiple infill point
         [~, idx] = sort(trgf);
         fmin = trgf(idx(1));
         infill_obj = @(x)infill_MOobjective(mdl, x, fmin);
@@ -131,6 +146,13 @@ while n <= nmax
     mdl = oodacefit(trgx, trgf);
     n = n + 1;
 end
+
+
+% ------
+
+
+
+
 
 % select best solution
 [~, idx] = sort(trgf);

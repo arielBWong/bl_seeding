@@ -26,6 +26,8 @@ if visualize
     h3 = subplot(2, 2, 4);
 end
 
+
+
 rng(seed, 'twister');
 global prob
 prob = eval(prob_str);
@@ -53,8 +55,10 @@ ub = prob.xu_bu;
 num_xvar = prob.n_uvar;
 initmatrix = [];
 
-global upper_xu     % upper archive 
-global lower_xl       % lower archive
+eval('loadparameter');
+
+global upper_xu                  % upper archive 
+global lower_xl                  % lower archive
 global lower_eval
 global lower_mdl
 global lower_trg
@@ -62,8 +66,10 @@ global lower_decisionSwitch
 global lower_evalchildren
 global lower_childrenx
 global lower_childrenf
+global predefined_FE
 global g
 g = 1;
+predefined_FE =  getfield(predefined_FE_allproblems, prob.name);
 
 upper_xu = [];
 lower_xl = [];
@@ -78,17 +84,15 @@ lower_decisionSwitch =[];
 
 [best_x, ~, ~, ~, ~] = gsolver(funh_obj, num_xvar, lb, ub, initmatrix, funh_con, param,  'externalfunction', funh_external,  'visualize', false, 'extra_infoprob', prob);
 
-
 % Re-evaluation post process
 % retrieve the last population
 xu_lastpop = upper_xu(end - param.popsize + 1:end, :);
 xl_lastpop = lower_xl(end - param.popsize + 1:end, :);
-fu_lastpop = prob.evaluate_u(xu_lastpop, xl_lastpop);                       % lazy step
+fu_lastpop = prob.evaluate_u(xu_lastpop, xl_lastpop);                      % lazy step
 
 lowertrgdata_lastpop = lower_trg(end - param.popsize + 1 : end);
 switch_lastpop = lower_decisionSwitch(end - param.popsize + 1 : end);
-indx_reeval = zeros(param.popsize, 1);                                               % re-evaluation index
-
+indx_reeval = zeros(param.popsize, 1);                                     % re-evaluation index
 
 selected_xu = xu_lastpop(1, :);
 selected_xl = xl_lastpop(1, :);
@@ -102,11 +106,11 @@ for ip = 1 : param.popsize
      if indx_reeval(1, 1) == 0  % &&  switch_lastpop(1) == 1  % 1 means local search
         indx_reeval(1) = 1;
         
-        [xl_reeval, extraFE] = re_evaluation(prob, xu_lastpop(1, :), xl_lastpop(1, :), lowertrgdata_lastpop{1}); % always reevaluate top one
+        [xl_reeval, extraFE] = re_evaluation(prob, xu_lastpop(1, :), xl_lastpop(1, :), lowertrgdata_lastpop{1});  % always reevaluate top one
        
         extra_lowerEval = extra_lowerEval + extraFE - 1;
         fu_reeval = prob.evaluate_u(xu_lastpop(1, :), xl_reeval);
-        fu_lastpop(1, :) = fu_reeval;   % replace existing value;
+        fu_lastpop(1, :) = fu_reeval;                                      % replace existing value;
         xl_lastpop(1, :) = xl_reeval;
         
         [~, idx] = sort(fu_lastpop);
@@ -195,6 +199,8 @@ global g
 global lower_evalchildren
 global lower_childrenx
 global lower_childrenf
+global lower_eval
+global predefined_FE
 % upper xu and lower level does not change at the same time,
 % upper_xu changes in generation wise, lower_xl changes in each xu's
 % evaluation step. they should eventually have the same size.
@@ -207,7 +213,8 @@ lower_searchSwitchFlags = [];
 mdls = {};
 trgdatas = {};
 
-vis= false;
+vis = false;
+output.termination_flag = false;
 for i = 1:m
     fprintf('gen %d, ind %d \n ', g, i);
     xui = xu(i, :);  
@@ -225,14 +232,19 @@ for i = 1:m
     mdls{end+1} = mdl;
     trgdatas{end+1} = trgdata;
     lower_searchSwitchFlags = [lower_searchSwitchFlags; lower_searchSwitchFlag];
+
     
     lower_evalchildren = [lower_evalchildren; single_lleval];
     lower_childrenx = [lower_childrenx; match_xl];
     lower_childrenf = [lower_childrenf; fi];  % infact it is fu
-    
-    
-    
+
+    %------------------
+    if lower_eval > predefined_FE
+        output.termination_flag = true;
+        break;
+    end    
 end
+
 fprintf('\n');
 g = g + 1;
 
@@ -272,7 +284,7 @@ end
 
 end
 
-function  save_results(xu, xl, prob, selected_xu, selected_xl, seed, use_seeding,  lower_eval, extra_lowerEval, seeding_strategy, lower_decisionSwitch, thr, lower_trg)
+function save_results(xu, xl, prob, selected_xu, selected_xl, seed, use_seeding,  lower_eval, extra_lowerEval, seeding_strategy, lower_decisionSwitch, thr, lower_trg)
 
 global lower_evalchildren
 global lower_childrenx

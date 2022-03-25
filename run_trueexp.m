@@ -35,9 +35,9 @@ addpath(problem_folder);
 %     'smd1(1, 2 , 1)' , 'smd2(1, 2, 1)',  'smd3(1, 2, 1)', ...
 %     'smd4(1, 2, 1)', 'smd6(1, 0, 2, 1)', };
 
-tic;
-blmapping_egoEvaldemo('smd3mp(1, 2, 1)',  1, 'use_seeding', true, 'seeding_strategy', 2, 'threshold', -1.1);
-toc;
+% tic;
+% blmapping_egoEvaldemo('smd3mp(1, 2, 1)',  1, 'use_seeding', true, 'seeding_strategy', 2, 'threshold', -1.1);
+% toc;
 %
 
 
@@ -56,21 +56,22 @@ problem_sets{1} = {'smd1(1, 2, 1)', 'smd2(1, 2, 1)',  'smd3(1, 2, 1)', ...
      'smd1mp(1, 1, 1)' , 'smd2mp(1, 1, 1)',  'smd3mp(1, 1, 1)', 'smd4mp(1, 1, 1)', ...
      'smd5mp(1, 1, 1)', 'smd6mp(1, 0, 1, 1)', 'smd7mp(1, 1, 1)',  'smd8mp(1, 1, 1)'};
 
-
-
-
 problem_sets{1} = {'smd1(1, 2, 1)', 'smd2(1, 2, 1)',  'smd3(1, 2, 1)', ...
      'smd4(1, 2, 1)', 'smd5(1, 2, 1)', 'smd6(1, 0, 2, 1)', 'smd7(1, 2, 1)',  'smd8(1, 2, 1)',...
      'smd1mp(1, 2, 1)' , 'smd2mp(1, 2, 1)',  'smd3mp(1, 2, 1)', 'smd4mp(1, 2, 1)', ...
      'smd5mp(1, 2, 1)', 'smd6mp(1, 0, 2, 1)', 'smd7mp(1, 2, 1)',  'smd8mp(1, 2, 1)'};
 
 
+problem_sets{1} = {'smd1(1, 2, 1)', 'smd2(1, 2, 1)',  'smd3(1, 2, 1)', ...
+     'smd4(1, 2, 1)', 'smd5(1, 2, 1)',...
+     'smd1mp(1, 2, 1)' , 'smd2mp(1, 2, 1)',  'smd3mp(1, 2, 1)', 'smd4mp(1, 2, 1)', ...
+     'smd5mp(1, 2, 1)'};
+
 
 thresholds = [-1.1, 0, 0.9];
 thresholds = [-1.1];
 tic;
 for its = 1:length(thresholds)
-
 
     for ip = 1:length(problem_sets)
         problems = problem_sets{ip};

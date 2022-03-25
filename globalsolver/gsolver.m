@@ -85,7 +85,7 @@ if visualize && size(lb, 2) == 2 && ~isempty(external_funh)
      plot2dupper(f1, lb, ub, pop);
 end
 %%%%%%%%%%%%%%%%%%%%
-
+termination_flag = false;
 
 gen=1;
 while gen <= param.gen
@@ -96,11 +96,21 @@ while gen <= param.gen
     % Evaluate and Order(need to test varargin)
     % [pop, archive]= evaluate_order(pop, archive, funh_obj, funh_con, child.X, gen, param);
     
-     [pop, archive]= evaluate_order2(pop, archive, funh_obj, funh_con, child.X, gen, param, 'prob', extra_infoprob);
+    % [pop, archive]= evaluate_order2(pop, archive, funh_obj, funh_con, child.X, gen, param, 'prob', extra_infoprob);
+
+    [pop, archive, termination_flag] = evaluate_order3(pop, archive, funh_obj, funh_con, child.X, gen, param, 'prob', extra_infoprob);
     
     % Reduce 2N to N
-    [pop]=reduce_pop(pop,param.popsize);
-    
+    [pop] = reduce_pop(pop, param.popsize);
+    if termination_flag == true
+        % for external function
+        if ~isempty(external_funh)
+            external_funh(pop);
+        end
+
+        break;
+    end
+
     % for external function
     if ~isempty(external_funh)
         external_funh(pop);
@@ -147,7 +157,7 @@ end
 
 
 % use archive to save last pop_x
-archive.pop_last =pop;
+archive.pop_last = pop;
 
 num_obj = size(pop.F, 2);
 num_con = size(pop.C, 2);

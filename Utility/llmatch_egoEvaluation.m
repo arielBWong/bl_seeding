@@ -137,8 +137,7 @@ if ~isempty(archive_xu) && seeding_only              % first generation on the u
                 history.x, history.fval];
             lower_eval = lower_eval + size(expensive_x, 1) + output.funcCount;
             
-            single_lleval = single_lleval + size(expensive_x, 1) + output.funcCount;
-            
+            single_lleval = single_lleval + size(expensive_x, 1) + output.funcCount;           
             lower_searchSwitchFlag = 1;
 
 
@@ -180,7 +179,6 @@ end
 % % initmatrix is set early in this method;
 %
 % [best_x, best_f, best_c, archive_search, ~] = gsolver(funh_obj, num_xvar, lb, ub, initmatrix, funh_con, param, 'visualize', false);
-
 % apply believer Kriging
 
 num_xvar = prob.n_lvar;
