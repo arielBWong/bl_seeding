@@ -48,8 +48,8 @@ funh_external = @(pop)up_probrecord(pop);
 funh_obj = @(x)up_objective_func(prob, x, use_seeding, seeding_strategy, thr);
 funh_con = @(x)up_constraint_func();
 
-param.gen = 5;
-param.popsize = 5;
+param.gen = 19;
+param.popsize = 25;
 lb = prob.xu_bl; 
 ub = prob.xu_bu;
 num_xvar = prob.n_uvar;

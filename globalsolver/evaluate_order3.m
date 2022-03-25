@@ -112,12 +112,12 @@ if ~isempty(pop.switch_lls)
         pop.C = [];           % not considering constraints
         pop.A(1, :) =  xsol;
         pop.trgdata(1) = {trgdata};   
-        pop.LLcount(1) = pop.LLcount(1) + param.maxFE + output.output.funcCount;
+        pop.LLcount(1) = pop.LLcount(1) + param.maxFE + output.funcCount;
 
         global lower_eval
-        lower_eval = lower_eval + param.maxFE + output.output.funcCount;
+        lower_eval = lower_eval + param.maxFE + output.funcCount;
 
-        
+
         % Can I change it to more efficient in terms of convergence?
         % resort
         pop =  pop_sortReval(pop);
