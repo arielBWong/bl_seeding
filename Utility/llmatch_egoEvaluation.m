@@ -38,6 +38,7 @@ cokrg_samplesize = 20;
 mdl = 'position_holder';
 trgdata = 'position_holder';
 initmatrix = []; %
+initmatrix_asInitialization = false;
 
 funh_obj = @(x)objective_func(prob, xu, x);
 funh_con = @(x)constraint_func(prob, xu, x);
@@ -93,19 +94,10 @@ if ~isempty(archive_xu) && seeding_only              % first generation on the u
             if localsearch_fail
                 initmatrix = [cokrg_trg.expensive_x; match_xl];
                 param.maxFE = param.maxFE - size(cokrg_trg.expensive_x, 1) - 2; % fail means two more evaluations in cokrg
+                % initmatrix_asInitialization = true;
 
-                %  algorithm will continue to ea search part
             else
                 lower_searchSwitchFlag = 1;
-
-%                 % create test
-%                 xl_prime = prob.get_xlprime(xu);
-%                 fl_prime = prob.evaluate_l(xu, xl_prime);
-%                 fl_pred = prob.evaluate_l(xu, match_xl);
-%                 if abs(fl_prime - fl_pred) > 5
-%                     fprintf('transfer  search fails \n');
-%                     % visualize_globalSearch(prob, trgdata, xu, match_xl);
-%                 end
 
                 %----
                 return;
@@ -184,7 +176,11 @@ end
 num_xvar = prob.n_lvar;
 
 select_hn = @output_selection;
-[best_x, best_f, best_c, archive_search] = ego_solver(funh_obj, num_xvar, prob.xl_bl, prob.xl_bu, initmatrix, funh_con, param, 'visualize', false,'infill', 3, 'gsolver_outputselect', select_hn);
+% [best_x, best_f, best_c, archive_search] = ego_solver(funh_obj, num_xvar, prob.xl_bl, prob.xl_bu, initmatrix, funh_con, param,...
+%    'visualize', false,'infill', 3, 'gsolver_outputselect', select_hn, 'initmatrix_asInitalization', initmatrix_asInitialization);
+
+[best_x, best_f, best_c, archive_search] = ego_solver_earlystop(funh_obj, num_xvar, prob.xl_bl, prob.xl_bu, initmatrix, funh_con, param,...
+    'visualize', false,'infill', 3, 'gsolver_outputselect', select_hn, 'initmatrix_asInitalization', initmatrix_asInitialization);
 
 % follow local search
 local_FE = 50;

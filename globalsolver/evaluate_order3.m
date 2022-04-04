@@ -78,16 +78,25 @@ pop.switch_lls = [pop.switch_lls; child.switch_lls];
 pop.LLcount = [pop.LLcount; child.LLcount];
 
 % [pop.F, pop.X, pop.C, pop.A, pop.Mdl, pop.trgdata] = pop_sort(pop.F, pop.X, pop.C, pop.A, pop.Mdl, pop.trgdata);
-pop = pop_sortCompact(pop);
+% 
+%
+if isempty(pop.switch_lls)
+    pop = pop_sortCompact(pop); % normal sort
+else
+    pop = pop_sortReevalPerserve(pop); % elitism sort
+end
 
 % check whether the first solution is local search
 % means local search
 if ~isempty(pop.switch_lls)
 
-    if pop.switch_lls(1) == 1        
+    n_elit = sum(pop.switch_lls == 2);
+    reeval_id = n_elit + 1;
+
+    if pop.switch_lls(reeval_id) == 1        
         % recalcualte the  lower level re-evaluation
-        xu = pop.X(1, :);
-        initmatrix = pop.trgdata{1};
+        xu = pop.X(reeval_id, :);
+        initmatrix = pop.trgdata{reeval_id};
         initmatrix = initmatrix(:, 1:end-1);
         num_xvar = size(pop.A, 2);
         funh_objego = @(x)objective_func(prob, xu, x);
@@ -107,32 +116,40 @@ if ~isempty(pop.switch_lls)
         trgdata = [archive_search.sols(:, 2: prob.n_lvar + 1), archive_search.sols(:, prob.n_lvar + 2: end)];
         trgdata = [trgdata; localdata];
               
-        pop.switch_lls(1) = 0;
-        pop.F(1) = prob.evaluate_u(xu, xsol);
-        pop.C = [];           % not considering constraints
-        pop.A(1, :) =  xsol;
-        pop.trgdata(1) = {trgdata};   
-        pop.LLcount(1) = pop.LLcount(1) + param.maxFE + output.funcCount;
+        pop.switch_lls(reeval_id) = 2;              % re-evaluation mark
+        pop.F(reeval_id) = prob.evaluate_u(xu, xsol);
+        pop.C = [];                         % not considering constraints
+        pop.A(reeval_id, :) =  xsol;
+        pop.trgdata(reeval_id) = {trgdata};   
+        pop.LLcount(reeval_id) = pop.LLcount(reeval_id) + param.maxFE + output.funcCount;
 
         global lower_eval
         lower_eval = lower_eval + param.maxFE + output.funcCount;
 
+        % sort in three parts
+        elit_id = pop.switch_lls == 2;
+        rest_id = ~elit_id;
 
-        % Can I change it to more efficient in terms of convergence?
-        % resort
-        pop =  pop_sortReval(pop);
-        
+        elit_pop = extract_pop(pop, elit_id);
+        rest_pop = extract_pop(pop, rest_id);
+
+        % sort seperatedly infact for re-use existing code
+        elit_pop = pop_sortCompact(elit_pop);
+        rest_pop = pop_sortReval(rest_pop);
+
+        % combine together
+        % Appending X F C to pop
+        pop.X = [elit_pop.X; rest_pop.X];
+        pop.F = [elit_pop.F; rest_pop.F];
+        pop.C = [elit_pop.C; rest_pop.C];
+        pop.A = [elit_pop.A; rest_pop.A];   % add on
+        pop.Mdl = [elit_pop.Mdl, rest_pop.Mdl];
+        pop.trgdata = [elit_pop.trgdata, rest_pop.trgdata];
+        pop.switch_lls = [elit_pop.switch_lls; rest_pop.switch_lls];
+        pop.LLcount = [elit_pop.LLcount; rest_pop.LLcount];
+
     end
 end
-
-% % dealing with feasibility on lower level
-% if ~isempty(varargin)
-%     fprintf('in evaluate_order, customized, but test needed\n');
-%     prob = varargin{1};
-%     xu_g =  varargin{2};
-%     xl_g = varargin{3};
-%     pop.F = pop_llfeasicheck(pop.X, pop.F, xu_g, xl_g, prob);
-% end
 
 end
 
@@ -143,7 +160,7 @@ num_pop = size(pop.F, 1);
 
 % This  function
 indx = 1: num_pop;
-indx_global  = pop.switch_lls==0;
+indx_global = pop.switch_lls == 0;
 indx_local = pop.switch_lls == 1;
 
 indx_globalnum = indx(indx_global);

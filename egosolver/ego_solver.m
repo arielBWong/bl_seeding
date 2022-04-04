@@ -35,6 +35,7 @@ addParameter(p, 'infill', 1); % 1 -- KB, 2 --EI
 addParameter(p, 'xl_prime', []);
 addParameter(p, 'gsolver_outputselect', []);
 addParameter(p, 'initmatrix_asExtra', false);
+addParameter(p, 'initmatrix_asInitalization', false);
 parse(p, funh_obj, num_xvar, lb, ub, initmatrix, funh_con, param, varargin{:});
 
 %-------------------
@@ -52,6 +53,7 @@ infill = p.Results.infill;
 xl_prime = p.Results.xl_prime;
 gsolver_outputselect= p.Results.gsolver_outputselect;
 initmatrix_asExtra = p.Results.initmatrix_asExtra;
+initmatrix_asInitalization = p.Results.initmatrix_asInitalization;
 %-------------------
 
 external_return = [];
@@ -63,8 +65,19 @@ bestc = NaN;
 n_init = size(initmatrix, 1);
 n_rest = param.initsize;  % - n_init;
 
-trgx = repmat(lb, n_rest, 1) + repmat(ub - lb, n_rest, 1) .* lhsdesign(n_rest, num_xvar);
-trgf = funh_obj(trgx);
+
+if initmatrix_asInitalization
+    trgx = initmatrix;
+    trgf = funh_obj(trgx);
+    initmatrix = [];
+    
+    initmatrix_asExtra = false;
+    param.initsize = n_init;
+    n_init = 0;
+else
+    trgx = repmat(lb, n_rest, 1) + repmat(ub - lb, n_rest, 1) .* lhsdesign(n_rest, num_xvar);
+    trgf = funh_obj(trgx);
+end
 
 % add init with distance cautious
 for i = 1:n_init
@@ -79,8 +92,6 @@ if visualize
 end
 
 %------------------------------------------------------
-
-
 
 %--- train model
 mdl = oodacefit(trgx, trgf);

@@ -47,7 +47,7 @@ while size(xl_samples, 1) < ns
     
     mask_lbcomply = R > prob.xl_bl;
     mask_ubcomply = R < prob.xl_bu;
-    mask_comply = mask_lbcomply .* mask_ubcomply; %
+    mask_comply = mask_lbcomply .* mask_ubcomply;   %
     mask_comply = sum(mask_comply, 2);
     
     idx = mask_comply == prob.n_lvar;
@@ -73,13 +73,12 @@ while size(xl_samples, 1) < ns
         if size(xl_samplesOut, 1) <int16( samplesize/2)
             xl_samples = [xl_samples; xl_samplesOut ];
         else
-             xl_samples = [xl_samples;  xl_samplesOut(1:int16(samplesize/2), :) ];
+            xl_samples = [xl_samples;  xl_samplesOut(1:int16(samplesize/2), :) ];
         end
         
         % recount sample size
         ns = size(xl_samples, 1);
-        
-        
+                
     else
          xl_samples = [xl_samplesIn(1:int16(samplesize/2), :); xl_samplesOut(1:int16(samplesize/2), :)];
     end

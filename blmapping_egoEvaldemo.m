@@ -64,7 +64,8 @@ global lower_mdl
 global lower_trg
 global lower_decisionSwitch
 global lower_evalchildren
-global lower_childrenx
+global lower_childrenxu
+global lower_childrenxl
 global lower_childrenf
 global predefined_FE
 global genCount
@@ -204,7 +205,8 @@ global upper_xu
 global lower_xl
 global g
 global lower_evalchildren
-global lower_childrenx
+global lower_childrenxu
+global lower_childrenxl
 global lower_childrenf
 global lower_eval
 global predefined_FE
@@ -244,7 +246,8 @@ for i = 1:m
 
     
     lower_evalchildren = [lower_evalchildren; single_lleval];
-    lower_childrenx = [lower_childrenx; match_xl];
+    lower_childrenxu = [lower_childrenxu; xui];
+    lower_childrenxl = [lower_childrenxl; match_xl];
     lower_childrenf = [lower_childrenf; fi];  % infact it is fu
 
     %------------------
@@ -297,7 +300,8 @@ end
 function save_results(xu, xl, prob, selected_xu, selected_xl, seed, use_seeding,  lower_eval, extra_lowerEval, seeding_strategy, lower_decisionSwitch, thr, lower_trg)
 
 global lower_evalchildren
-global lower_childrenx
+global lower_childrenxu
+global lower_childrenxl
 global lower_childrenf
 global genCount
 
@@ -361,7 +365,12 @@ csvwrite(savename,lower_evalchildren);
 
 filename = strcat('lower_childrenPopx_seed_',  num2str(seed), '.csv');
 savename = fullfile(resultfolder, filename);
-csvwrite(savename,  lower_childrenx);
+csvwrite(savename,  lower_childrenxl);
+
+
+filename = strcat('lower_childrenPopxu_seed_',  num2str(seed), '.csv');
+savename = fullfile(resultfolder, filename);
+csvwrite(savename,  lower_childrenxu);
 
 
 filename = strcat('lower_childrenFu_seed_',  num2str(seed), '.csv');

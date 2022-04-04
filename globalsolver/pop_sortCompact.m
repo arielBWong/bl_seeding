@@ -1,19 +1,16 @@
 function [pop] = pop_sortCompact(pop)
 % auxiliary function
-% this function sort evoluation popluation w.r.t.
-% number of objectives
-% constraints
-% nd sort is not compatible with single objective problems
+% this function sort evoluation popluation, no constraint is considered
 %-----------------------------------------------------
 
 numcon = size(pop.C, 2);
 numobj = size(pop.F, 2);
 
 if numcon == 0
-    if numobj > 1                                                  % mo problem
+    if numobj > 1                                                          % mo problem
         [fronts, ids, ~] = nd_sort(pop.F, (1:size(pop.F, 1))');
-    else                                                                        % so problem
-        [~, ids] = sort(pop.F);                                          % acending sort/minimization
+    else                                                                   % so problem
+        [~, ids] = sort(pop.F);                                            % acending sort/minimization
     end
     
     %------------
